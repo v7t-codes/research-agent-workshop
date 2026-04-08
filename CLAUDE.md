@@ -80,6 +80,10 @@ Agents communicate through files. Each gets fresh context — no bleed between s
 
 Practice problems in `benchmark/practice/`, test problems in `benchmark/test/`, reference reports in `benchmark/reference/`, rubrics in `benchmark/criteria/`.
 
+### DeepResearch-Bench Integration
+
+`benchmark/deepresearch-bench/` contains an adapter to run workshop agents against the [full 100-task PhD-level bench](https://github.com/Ayanamo0730/deep_research_bench). The adapter takes a workshop step (2-6), builds the appropriate system prompt and tool config, runs against bench tasks, and outputs JSONL for RACE/FACT evaluation. See `benchmark/deepresearch-bench/README.md` for usage.
+
 ## Dependencies
 
 Python 3.11+, `anthropic`, `fastmcp`, Node.js 20+, Claude Code CLI.
