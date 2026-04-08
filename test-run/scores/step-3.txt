@@ -1,0 +1,25 @@
+
+============================================================
+  RESEARCH AGENT EVALUATION (HEURISTIC)
+============================================================
+
+  Comprehensiveness............. ██████████ 10/10  (weight: 30%)
+    → sections=9, numbers=18, perspectives=27, gaps=4
+
+  Insight....................... ███░░░░░░░ 3/10  (weight: 35%)
+    → analysis=1, conflicts=4, forward=1
+
+  Instruction Following......... ████████░░ 8/10  (weight: 20%)
+    → question=provided
+
+  Readability................... ████████░░ 8/10  (weight: 15%)
+    → thesis=True, sections=9, table=True, refs_section=True
+
+  Citation Bonus................ █████░░░░░ 5/10  (bonus: 10%)
+    → urls=17, titles=7, arxiv=0, years=0, dois=0
+
+────────────────────────────────────────────────────────────
+  TOTAL SCORE: 73.5/100
+────────────────────────────────────────────────────────────
+  ★ Strong — iterative agent level (step 4)
+
