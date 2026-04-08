@@ -7,7 +7,7 @@
     → sections=9, numbers=18, perspectives=27, gaps=4
 
   Insight....................... ███░░░░░░░ 3/10  (weight: 35%)
-    → analysis=1, conflicts=4, forward=1
+    → analysis=1, conflicts=4, forward=1, evidence_quality=0, verification=1
 
   Instruction Following......... ████████░░ 8/10  (weight: 20%)
     → question=provided
@@ -19,7 +19,7 @@
     → urls=17, titles=7, arxiv=0, years=0, dois=0
 
 ────────────────────────────────────────────────────────────
-  TOTAL SCORE: 73.5/100
+  TOTAL SCORE: 57.7/100
 ────────────────────────────────────────────────────────────
-  ★ Strong — iterative agent level (step 4)
+  ★ Strong — tool-augmented + iterative (steps 3-4)
 

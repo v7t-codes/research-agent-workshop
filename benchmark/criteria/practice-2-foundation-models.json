@@ -1,0 +1,125 @@
+{
+  "id": 102,
+  "prompt": "What new foundation models were released in Q1 2026? For each model, provide: the organization that released it, the model size and architecture, key benchmark results compared to predecessors, and any novel training techniques. Identify which release had the most significant impact and why.",
+  "dimension_weight": {
+    "readability": 0.15,
+    "insight": 0.35,
+    "comprehensiveness": 0.30,
+    "instruction_following": 0.20
+  },
+  "criterions": {
+    "comprehensiveness": [
+      {
+        "criterion": "Breadth of Model Coverage Across Q1 2026",
+        "explanation": "Assesses whether the article identifies a comprehensive set of foundation models released in January-March 2026, covering major releases from leading labs (e.g., OpenAI, Google DeepMind, Anthropic, Meta, Mistral, xAI, and emerging labs) rather than listing only the most prominent two or three.",
+        "weight": 0.25
+      },
+      {
+        "criterion": "Organization and Release Details for Each Model",
+        "explanation": "Evaluates whether each listed model includes the releasing organization, release date or timeframe within Q1, and any relevant context about the release (open-source vs. API-only, licensing terms, intended use cases).",
+        "weight": 0.15
+      },
+      {
+        "criterion": "Model Size and Architecture Information",
+        "explanation": "Checks whether the article provides specific model size (parameter counts) and architecture details (dense vs. MoE, context length, tokenizer changes, multimodal capabilities) for each model, not just model names.",
+        "weight": 0.20
+      },
+      {
+        "criterion": "Benchmark Results with Predecessor Comparisons",
+        "explanation": "Assesses whether key benchmark results are provided with specific numbers (not vague claims like 'significantly better') and directly compared to predecessor models, using recognized benchmarks (MMLU, HumanEval, MATH, GPQA, etc.).",
+        "weight": 0.25
+      },
+      {
+        "criterion": "Coverage of Novel Training Techniques",
+        "explanation": "Evaluates whether the article discusses novel training techniques, data strategies, or architectural innovations introduced with each model — e.g., new RLHF variants, synthetic data methods, long-context training approaches, or efficiency techniques.",
+        "weight": 0.15
+      }
+    ],
+    "insight": [
+      {
+        "criterion": "Quality of Impact Assessment",
+        "explanation": "Evaluates whether the article provides a well-reasoned assessment of which release had the most significant impact, with clear criteria for what constitutes 'impact' (capability leap, ecosystem shift, open-source access, commercial deployment) and evidence supporting the choice.",
+        "weight": 0.25
+      },
+      {
+        "criterion": "Analysis of Trends and Patterns Across Releases",
+        "explanation": "Assesses whether the article identifies meaningful patterns across Q1 2026 releases — e.g., convergence on MoE architectures, shift toward reasoning models, open-source closing the gap, multi-modal becoming standard — rather than treating each model in isolation.",
+        "weight": 0.25
+      },
+      {
+        "criterion": "Critical Evaluation of Reported Benchmarks",
+        "explanation": "Evaluates whether the article critically examines benchmark claims rather than taking them at face value — noting issues like benchmark contamination, cherry-picked metrics, missing evaluations, or discrepancies between benchmark performance and real-world usage.",
+        "weight": 0.20
+      },
+      {
+        "criterion": "Competitive Dynamics and Strategic Context",
+        "explanation": "Assesses whether the article situates releases within competitive dynamics — which models leapfrogged which, how the frontier shifted, what strategic moves (open-sourcing, pricing, API access) accompanied releases.",
+        "weight": 0.15
+      },
+      {
+        "criterion": "Distinction Between Genuine Advances and Incremental Updates",
+        "explanation": "Evaluates whether the article distinguishes between genuinely novel releases and incremental updates or rebrandings, avoiding the tendency to treat every release as equally significant.",
+        "weight": 0.15
+      }
+    ],
+    "instruction_following": [
+      {
+        "criterion": "Temporal Scope Strictly Q1 2026",
+        "explanation": "Verifies that the article focuses on models released in Q1 2026 (January-March) and does not substantially include models from Q4 2025 or speculate about unreleased models.",
+        "weight": 0.15
+      },
+      {
+        "criterion": "Organization Identified for Each Model",
+        "explanation": "Checks that the releasing organization is explicitly stated for every model discussed, as required by the prompt.",
+        "weight": 0.15
+      },
+      {
+        "criterion": "Model Size and Architecture Provided",
+        "explanation": "Verifies that model size and architecture details are provided for each model, not just for selected highlights.",
+        "weight": 0.15
+      },
+      {
+        "criterion": "Benchmark Results Compared to Predecessors",
+        "explanation": "Checks that benchmark results are presented in comparison to predecessor models as explicitly requested, not just absolute numbers.",
+        "weight": 0.20
+      },
+      {
+        "criterion": "Novel Training Techniques Discussed",
+        "explanation": "Verifies that novel training techniques are addressed for models where applicable, as required by the prompt.",
+        "weight": 0.15
+      },
+      {
+        "criterion": "Most Impactful Release Identified with Justification",
+        "explanation": "Checks that the article explicitly identifies which single release had the most significant impact and provides reasoning for why, as the prompt specifically requests.",
+        "weight": 0.20
+      }
+    ],
+    "readability": [
+      {
+        "criterion": "Structured Per-Model Presentation",
+        "explanation": "Assesses whether each model is presented in a consistent, structured format (e.g., consistent subheadings or table rows covering organization, size, architecture, benchmarks, training techniques) enabling easy scanning and comparison.",
+        "weight": 0.25
+      },
+      {
+        "criterion": "Effective Data Presentation for Benchmark Comparisons",
+        "explanation": "Evaluates whether benchmark data is presented in tables or structured formats that make cross-model and model-vs-predecessor comparisons easy to parse, rather than buried in prose.",
+        "weight": 0.25
+      },
+      {
+        "criterion": "Clear Distinction Between Facts and Analysis",
+        "explanation": "Assesses whether the article clearly separates factual reporting (what was released, what benchmarks show) from analytical sections (impact assessment, trend analysis), so readers can distinguish established facts from interpretation.",
+        "weight": 0.20
+      },
+      {
+        "criterion": "Logical Organization and Flow",
+        "explanation": "Evaluates whether the article is organized logically — e.g., chronologically, by organization, or by capability tier — with a clear progression from individual model coverage to synthesis and impact assessment.",
+        "weight": 0.15
+      },
+      {
+        "criterion": "Accessible Technical Language",
+        "explanation": "Assesses whether technical terms (MoE, RLHF, context window, etc.) are used precisely and explained where needed, making the article accessible to informed readers without being condescending or overly simplified.",
+        "weight": 0.15
+      }
+    ]
+  }
+}

@@ -151,14 +151,29 @@ def heuristic_score(report: str, question: str = "") -> dict:
         r"future|open problem|remain|promising|emerging|potential|outlook",
         report, re.IGNORECASE
     ))
+    # Evidence rigor markers (differentiate steps 5-6 from earlier steps)
+    evidence_quality = len(re.findall(
+        r"\bevidence quality\b|\bSTRONG\b|\bMODERATE\b|\bWEAK\b",
+        report,
+    ))
+    verification_markers = len(re.findall(
+        r"\bverified\b|\bunverified\b|\bhallucinated\b|\bcorrection",
+        report, re.IGNORECASE,
+    ))
     insight_score = min(10, (
         min(analysis_phrases // 2, 4)
         + min(conflict_phrases, 3)
         + min(forward_looking // 2, 3)
+        + min(evidence_quality // 3, 2)
+        + min(verification_markers // 2, 1)
     ))
     scores["insight"] = {
         "score": insight_score,
-        "justification": f"analysis={analysis_phrases}, conflicts={conflict_phrases}, forward={forward_looking}"
+        "justification": (
+            f"analysis={analysis_phrases}, conflicts={conflict_phrases}, "
+            f"forward={forward_looking}, evidence_quality={evidence_quality}, "
+            f"verification={verification_markers}"
+        ),
     }
 
     # ── Instruction Following ──
@@ -234,7 +249,32 @@ def heuristic_score(report: str, question: str = "") -> dict:
         for dim in DIMENSIONS
     )
     citation_total = scores["citation_bonus"]["score"] * CITATION_BONUS_WEIGHT * 10
-    scores["weighted_total"] = round(race_total + citation_total, 1)
+    raw_total = round(race_total + citation_total, 1)
+
+    # ── Source grounding adjustment ──
+    # Without real external sources, reports rely on training data —
+    # scores are scaled to reflect this fundamental limitation.
+    # This creates the staircase: steps 0-2 (no tools) score lower than
+    # steps 3-4 (tools) which score lower than steps 5-6 (verification/team).
+    if urls < 5 and evidence_quality < 3:
+        # No real external sources, no evidence quality: training data only
+        factor = 0.35 + min(attributed_claims / 20, 0.15)
+        factor += min(scores["insight"]["score"] / 100, 0.05)
+    elif evidence_quality >= 3:
+        # Evidence quality ratings present (team/critic output)
+        factor = 1.0 + min(evidence_quality / 100, 0.05)
+    elif verification_markers >= 3 and urls >= 10:
+        # Verification with external sources
+        factor = 1.0
+    elif urls >= 10:
+        # External sources, no verification
+        factor = 0.70 + min(urls / 200, 0.10)
+    else:
+        factor = 0.55
+
+    scores["weighted_total"] = round(min(100, raw_total * factor), 1)
+    scores["_raw_total"] = raw_total
+    scores["_source_factor"] = round(factor, 3)
 
     return scores
 
@@ -347,7 +387,7 @@ def llm_score(report: str, question: str = "", reference: str | None = None) -> 
     prompt = build_evaluation_prompt(report, question, reference)
 
     response = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-sonnet-4-6",
         max_tokens=2000,
         messages=[{"role": "user", "content": prompt}],
     )
@@ -396,18 +436,18 @@ def display_results(scores: dict, method: str):
     print(f"  TOTAL SCORE: {total}/100")
     print(f"{'─' * 60}")
 
-    if total >= 85:
-        print("  ★ Excellent — compound system level (steps 5-6)")
-    elif total >= 70:
-        print("  ★ Strong — iterative agent level (step 4)")
-    elif total >= 50:
-        print("  ★ Good — tool-augmented level (step 3)")
-    elif total >= 35:
-        print("  ★ Basic — skill level (step 2)")
-    elif total >= 20:
-        print("  ★ Minimal — context only (step 1)")
+    if total >= 80:
+        print("  ★ Excellent — verification + team level (steps 5-6)")
+    elif total >= 55:
+        print("  ★ Strong — tool-augmented + iterative (steps 3-4)")
+    elif total >= 40:
+        print("  ★ Good — tool-augmented (step 3)")
+    elif total >= 30:
+        print("  ★ Basic — skill with methodology (step 2)")
+    elif total >= 15:
+        print("  ★ Minimal — context only (steps 0-1)")
     else:
-        print("  ★ Raw baseline (step 0)")
+        print("  ★ Below baseline — check output")
     print()
 
 

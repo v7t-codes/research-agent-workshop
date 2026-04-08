@@ -1,0 +1,125 @@
+{
+  "id": 103,
+  "prompt": "What is the current evidence on scaling laws for mixture-of-experts (MoE) models? Specifically: what do published results show about how MoE scaling differs from dense model scaling? Where do researchers disagree on the efficiency gains? What methodological differences explain conflicting results? Provide specific numbers from at least 5 papers.",
+  "dimension_weight": {
+    "readability": 0.15,
+    "insight": 0.35,
+    "comprehensiveness": 0.30,
+    "instruction_following": 0.20
+  },
+  "criterions": {
+    "comprehensiveness": [
+      {
+        "criterion": "Coverage of Key MoE Scaling Law Papers",
+        "explanation": "Assesses whether the article covers the major papers on MoE scaling laws — e.g., Switch Transformer, GShard, ST-MoE, Unified Scaling Laws for Routed Language Models (Clark et al.), DeepSeek-MoE, Mixtral, and others — providing sufficient breadth across the literature.",
+        "weight": 0.25
+      },
+      {
+        "criterion": "Specific Numerical Results from Published Papers",
+        "explanation": "Evaluates whether the article includes concrete numbers from papers — scaling exponents, compute-optimal ratios, efficiency multipliers (e.g., 'MoE achieves equivalent quality to a dense model at X% of the compute'), specific loss values, or parameter-to-FLOP tradeoff ratios.",
+        "weight": 0.25
+      },
+      {
+        "criterion": "Coverage of Dense vs. MoE Scaling Comparison",
+        "explanation": "Checks whether the article explicitly compares MoE scaling behavior to dense model scaling — including how loss curves differ, whether scaling exponents change, and at what scale MoE advantages emerge or diminish.",
+        "weight": 0.20
+      },
+      {
+        "criterion": "Discussion of Methodological Variations Across Studies",
+        "explanation": "Assesses whether the article covers how different papers define and measure efficiency differently — total parameters vs. active parameters vs. FLOPs vs. wall-clock time — and how routing strategies, expert counts, and granularity choices vary across studies.",
+        "weight": 0.20
+      },
+      {
+        "criterion": "Coverage of Practical Scaling Challenges",
+        "explanation": "Evaluates whether the article discusses practical challenges that affect MoE scaling in reality — load balancing, communication overhead, expert specialization/collapse, memory footprint, and inference-time routing costs.",
+        "weight": 0.10
+      }
+    ],
+    "insight": [
+      {
+        "criterion": "Analysis of Why Results Conflict",
+        "explanation": "Evaluates whether the article goes beyond listing disagreements to analyze root causes — e.g., different papers measuring 'efficiency' on different axes, different expert granularity confounding comparisons, or differences in training data composition affecting scaling behavior.",
+        "weight": 0.30
+      },
+      {
+        "criterion": "Reconciliation of Conflicting Claims",
+        "explanation": "Assesses whether the article attempts to reconcile apparently conflicting results by identifying conditions under which different claims hold — e.g., MoE is more efficient under compute-optimal training but less so under fixed-parameter comparisons.",
+        "weight": 0.25
+      },
+      {
+        "criterion": "Critical Evaluation of Efficiency Claims",
+        "explanation": "Evaluates whether the article critically examines MoE efficiency claims — questioning whether reported gains hold under fair comparisons, noting when apples-to-oranges comparisons inflate claimed advantages, and identifying which efficiency metrics are most meaningful.",
+        "weight": 0.20
+      },
+      {
+        "criterion": "Identification of Unresolved Questions and Research Gaps",
+        "explanation": "Assesses whether the article identifies what remains genuinely unknown — e.g., whether MoE scaling advantages persist at frontier scale, optimal expert count scaling, or whether MoE and dense scaling eventually converge.",
+        "weight": 0.15
+      },
+      {
+        "criterion": "Synthesis into Coherent Understanding",
+        "explanation": "Evaluates whether the article synthesizes the disparate results into a coherent picture of what we currently know and don't know about MoE scaling, rather than leaving the reader with a disconnected list of paper summaries.",
+        "weight": 0.10
+      }
+    ],
+    "instruction_following": [
+      {
+        "criterion": "MoE vs. Dense Scaling Comparison Addressed",
+        "explanation": "Verifies that the article explicitly addresses how MoE scaling differs from dense model scaling, as directly requested in the prompt.",
+        "weight": 0.20
+      },
+      {
+        "criterion": "Areas of Researcher Disagreement Identified",
+        "explanation": "Checks that the article explicitly identifies where researchers disagree on efficiency gains, not just presenting a consensus view.",
+        "weight": 0.20
+      },
+      {
+        "criterion": "Methodological Differences Explaining Conflicts Discussed",
+        "explanation": "Verifies that the article explains which methodological differences account for conflicting results, as specifically requested in the prompt.",
+        "weight": 0.20
+      },
+      {
+        "criterion": "At Least 5 Papers Cited with Specific Numbers",
+        "explanation": "Checks that the minimum requirement of specific numbers from at least 5 papers is met, with real citations (not hallucinated papers).",
+        "weight": 0.20
+      },
+      {
+        "criterion": "Focus Maintained on Scaling Laws (Not General MoE Survey)",
+        "explanation": "Assesses whether the article stays focused on scaling laws and efficiency specifically, rather than becoming a general MoE architecture survey covering routing mechanisms, training tricks, or deployment in detail.",
+        "weight": 0.10
+      },
+      {
+        "criterion": "Evidence-Based Claims Throughout",
+        "explanation": "Verifies that claims about scaling behavior are grounded in specific published results rather than unsupported generalizations or speculation.",
+        "weight": 0.10
+      }
+    ],
+    "readability": [
+      {
+        "criterion": "Clear Presentation of Numerical Comparisons",
+        "explanation": "Assesses whether scaling law numbers, efficiency metrics, and cross-paper comparisons are presented in tables or structured formats that make it easy to compare results across studies, rather than buried in dense paragraphs.",
+        "weight": 0.25
+      },
+      {
+        "criterion": "Logical Organization of Conflicting Evidence",
+        "explanation": "Evaluates whether the article organizes conflicting results clearly — e.g., grouping by claim/counterclaim, by methodology, or by metric — so the reader can follow the disagreements and their resolution.",
+        "weight": 0.25
+      },
+      {
+        "criterion": "Clarity of Technical Explanations",
+        "explanation": "Assesses whether key concepts (scaling exponents, compute-optimal training, active vs. total parameters, routing mechanisms) are explained clearly enough for a reader familiar with ML but not necessarily an MoE specialist.",
+        "weight": 0.20
+      },
+      {
+        "criterion": "Effective Paper-by-Paper Summaries",
+        "explanation": "Evaluates whether individual paper contributions are summarized concisely with their key finding and methodology, rather than either over-detailed full paper reviews or one-line throwaway mentions.",
+        "weight": 0.15
+      },
+      {
+        "criterion": "Synthesis Sections Distinct from Evidence Sections",
+        "explanation": "Assesses whether the article clearly separates evidence presentation (what papers found) from synthesis and analysis (what it means, what's unresolved), helping the reader navigate between facts and interpretation.",
+        "weight": 0.15
+      }
+    ]
+  }
+}
