@@ -640,9 +640,104 @@ Read a reference report with `cat benchmark/reference/practice-1-nas.md` and not
 
 Then compare those counts to your output. The gap tells you exactly what to add.
 
+### Setting Up Self-Improving Loops
+
+The most powerful optimization technique is a **closed-loop system** where the agent's output feeds back into improving the agent itself. This is eval-driven development.
+
+#### The Basic Loop
+
+```
+┌─────────────────────────────────────────────────┐
+│  1. Run agent on a question                      │
+│  2. Score output with evaluate.py                │
+│  3. Identify lowest RACE dimension               │
+│  4. Edit SKILL.md with targeted fix              │
+│  5. Re-run on SAME question                      │
+│  6. Compare scores — did the fix help?           │
+│  7. If yes: keep the change. If no: revert.      │
+│  8. Move to next-lowest dimension. Repeat.       │
+└─────────────────────────────────────────────────┘
+```
+
+Run this manually first to build intuition:
+
+```bash
+# Round 1: baseline
+python benchmark/evaluate.py --input output-v1.md --quick --question "..." --verbose
+# Look at: which dimension is lowest? What's the _source_factor?
+
+# Round 2: after targeted SKILL.md edit
+python benchmark/evaluate.py --input output-v2.md --quick --question "..." --verbose
+# Compare: did the targeted dimension improve? Did others regress?
+```
+
+#### Automated Self-Improvement with Optimize-Anything
+
+The [optimize-anything](https://github.com/rachittshah/deep-research) pattern automates this loop using **reflective mutation**:
+
+1. **Candidate generation**: Claude reads the current SKILL.md + the eval scores and proposes N mutations (e.g., "add conflict detection instruction", "strengthen citation requirements")
+2. **Evaluation**: Each candidate runs against a held-out test set and gets scored
+3. **Selection**: Best candidate becomes the new baseline
+4. **Reflection**: The optimizer reflects on why the winner won and uses that insight to guide next round's mutations
+5. **Repeat**: 5-7 rounds typically converge
+
+This is the same pattern behind the deep-research plugin's 4.56/5.00 score. Each round of reflective mutation targeted a specific weakness:
+
+| Round | Weakness Identified | Fix Applied | Score Impact |
+|-------|-------------------|-------------|-------------|
+| 1 | Generic search queries | Added site: filters, date qualifiers | Completeness +0.3 |
+| 2 | No contradiction handling | Added explicit contradiction format | Balance +0.4 |
+| 3 | Diminishing returns in search | 3-query saturation rule | Efficiency, no score drop |
+| 4 | Corroboration not tracked | Evidence-weighing hierarchy in critic | Accuracy +0.2 |
+| 5 | Wikipedia reliance | Wikipedia banned (weight 0.0) | Source Credibility +0.3 |
+| 6 | URL mismatches | "Every URL must be fetched in this session" | Citation Quality +0.2 |
+| 7 | Temporal inconsistencies | "Publication year ≥ data year" rule | Accuracy +0.1 |
+
+#### Building Your Own Eval Loop
+
+For the workshop, the simplest self-improving loop:
+
+```bash
+#!/bin/bash
+# self-improve.sh — Run 3 rounds of eval-driven optimization
+QUESTION="Your research question here"
+
+for round in 1 2 3; do
+  echo "=== Round $round ==="
+  # Run the agent (adjust step as needed)
+  echo "$QUESTION" | claude -p --model sonnet \
+    --system-prompt "$(cat step-1-context/CLAUDE.md)
+---
+$(cat your-skill/SKILL.md)" \
+    --allowedTools "WebSearch,WebFetch,Read,Write" \
+    > "output-round-${round}.md" 2>/dev/null
+
+  # Score it
+  python benchmark/evaluate.py \
+    --input "output-round-${round}.md" \
+    --quick --question "$QUESTION" --verbose
+
+  echo "Review scores above. Edit SKILL.md to fix the lowest dimension."
+  echo "Press Enter when ready for next round..."
+  read
+done
+```
+
+Run this and manually edit SKILL.md between rounds. After 3 rounds, you'll have a measurably better agent.
+
+#### Eval-Driven Development: The Verification Loop (Tier 2)
+
+For students building verification: the verification agent IS a self-improving loop. It catches errors and feeds corrections back:
+
+```
+Research agent → draft report → Verification agent → error list → Research agent corrects
+```
+
+This is the same pattern at the agent level: generate → evaluate → fix. The verification agent is your eval. When it flags a hallucinated paper, that's the same signal as a low RACE score — it tells you exactly what to fix.
+
 ### The Deep-Research Plugin Pattern
 
-The [deep-research plugin](https://github.com/rachittshah/deep-research) scored **4.56/5.00** on DeepResearch-Bench through iterative optimization. The key pattern:
+The [deep-research plugin](https://github.com/rachittshah/deep-research) scored **4.56/5.00** on DeepResearch-Bench through 7 rounds of reflective mutation. The key pattern:
 
 1. Start with a working agent (equivalent to step 4)
 2. Run against benchmark tasks

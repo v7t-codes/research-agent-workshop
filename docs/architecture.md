@@ -1159,3 +1159,96 @@ research-agent-workshop/
 +-- docs/
       +-- architecture.md                  # This document
 ```
+
+---
+
+## Appendix C: Building Your Own MCP Server
+
+The workshop's `arxiv_server.py` is a template. Here's how to build your own domain-specific MCP server from scratch:
+
+### Step 1: Scaffold
+
+```python
+from fastmcp import FastMCP
+
+mcp = FastMCP("my-research-tools")
+
+@mcp.tool
+def search_pubmed(query: str, max_results: int = 10) -> str:
+    """Search PubMed for biomedical papers.
+
+    Args:
+        query: Search terms (e.g., "CRISPR gene therapy 2025")
+        max_results: Papers to return (default 10, max 50)
+    """
+    import urllib.request, json
+    url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term={query}&retmax={max_results}&retmode=json"
+    data = json.loads(urllib.request.urlopen(url, timeout=15).read())
+    ids = data.get("esearchresult", {}).get("idlist", [])
+
+    # Fetch details for each paper
+    result = f"Found {len(ids)} papers for: {query}\n\n"
+    for pmid in ids:
+        result += f"- PubMed ID: {pmid} | https://pubmed.ncbi.nlm.nih.gov/{pmid}/\n"
+    return result
+
+if __name__ == "__main__":
+    mcp.run()
+```
+
+### Step 2: Connect to Claude Code
+
+Add to `.claude/settings.json` or create an MCP config file:
+
+```json
+{
+  "mcpServers": {
+    "my-research-tools": {
+      "command": "python3",
+      "args": ["/absolute/path/to/my_server.py"]
+    }
+  }
+}
+```
+
+### Step 3: Update SKILL.md
+
+Add the new tool to `allowed-tools` in your SKILL.md frontmatter:
+
+```yaml
+allowed-tools: WebSearch WebFetch Read Write mcp__my-research-tools__search_pubmed
+```
+
+### Key Design Principles
+
+- **Return structured text, not raw JSON.** Claude reads text better than nested objects.
+- **Include metadata:** title, authors, date, URL, abstract. The more structure, the better the research output.
+- **Handle errors gracefully:** timeouts, rate limits, empty results. Never let the server crash.
+- **Limit results:** 10-20 papers max. More causes context window bloat with diminishing returns.
+
+Other APIs worth wrapping: DBLP, IEEE Xplore, PapersWithCode, Google Scholar (via SerpAPI), CrossRef (DOI verification).
+
+---
+
+## Appendix D: Reference Links
+
+### Essential Reading
+
+- [Anthropic: Building Effective Agents](https://www.anthropic.com/research/building-effective-agents)
+- [Claude Code Documentation](https://docs.anthropic.com/en/docs/claude-code)
+- [MCP Specification](https://modelcontextprotocol.io/)
+- [Anthropic Multi-Agent Research System](https://www.anthropic.com/engineering/multi-agent-research-system)
+- [The Complete Guide to Building Skills for Claude (PDF)](https://resources.anthropic.com/hubfs/The-Complete-Guide-to-Building-Skill-for-Claude.pdf)
+
+### Study These Repos
+
+- [rachittshah/deep-research](https://github.com/rachittshah/deep-research) — Production multi-agent research plugin (4.56/5.00 on DeepResearch-Bench)
+- [Ayanami0730/deep_research_bench](https://github.com/Ayanami0730/deep_research_bench) — 100 PhD-level research tasks with RACE+FACT evaluation
+- [modelcontextprotocol/servers](https://github.com/modelcontextprotocol/servers) — MCP reference server implementations
+- [dzhng/deep-research](https://github.com/dzhng/deep-research) — Minimal deep research agent (<500 lines)
+- [K-Dense-AI/claude-scientific-skills](https://github.com/K-Dense-AI/claude-scientific-skills) — Scientific skill library
+
+### Context Engineering
+
+- [Manus: Context Engineering for AI Agents](https://manus.im/blog/Context-Engineering-for-AI-Agents-Lessons-from-Building-Manus)
+- [Karpathy: AutoResearch](https://github.com/karpathy/autoresearch)
