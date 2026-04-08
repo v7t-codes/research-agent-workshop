@@ -1,12 +1,25 @@
-# Research Agent Workshop — Build Your Research Agent
+# Build Your Research Agent — IISc Workshop
 
-Build a compound research agent step by step. Watch your benchmark score climb with each concept you add. Scored against the Deep Research Bench (RACE framework).
+> Presenters: Rachitt Shah + Vishwajit | Wednesday 4–7 PM | ~50 students
+
+Build a compound research agent step by step. Watch your benchmark score climb with each concept you add. Same model. Six engineering concepts. **20 → 93.**
 
 ## The Thesis
 
 Same model, different harness, dramatically different results. Opus 4.5 raw: 30.5% on OSWorld. With a harness: 66.3%. **The system around the model matters more than the model itself.**
 
-You'll prove this by building a research agent through six steps — each adding one concept — and measuring the improvement at every step against a real benchmark.
+## The Score Staircase
+
+```
+Step 0 (raw):           20/100  ─┐
+Step 1 (context):       21/100   ├─ No tools (training data only)
+Step 2 (skill):         37/100  ─┘
+Step 3 (tool):          58/100  ─┐
+Step 4 (iterative):     53/100  ─┤  Tools (real external sources)
+                                 ─┘
+Step 5 (verification):  90/100  ─┐
+Step 6 (team):          93/100  ─┘  Verification + Team
+```
 
 ## The Six Concepts
 
@@ -36,7 +49,7 @@ npm install -g @anthropic-ai/claude-code
 export ANTHROPIC_API_KEY="your-key-here"
 
 # 3. Install Python deps
-pip install anthropic fastmcp
+pip install -r requirements.txt
 
 # 4. Verify
 ./verify.sh
@@ -68,6 +81,9 @@ python3 benchmark/evaluate.py --input output.md --question "your research questi
 
 # With reference report (calibrated)
 python3 benchmark/evaluate.py --input output.md --reference benchmark/reference/test-2-a2a-mcp.md
+
+# Verify scoring staircase
+python3 benchmark/verify_staircase.py
 ```
 
 ## Benchmark
@@ -78,3 +94,25 @@ Evaluation uses the **RACE framework** from Deep Research Bench:
 - Instruction Following (20%) — addresses all parts of the question
 - Readability (15%) — structure, clarity, logical flow
 - Citation Bonus (+10%) — verifiable sources with real URLs/papers
+
+For advanced teams: run against the full [DeepResearch-Bench](https://github.com/Ayanamo0730/deep_research_bench) (100 PhD-level tasks) using the adapter in `benchmark/deepresearch-bench/`.
+
+## Documentation
+
+Detailed KT docs in [`docs/`](docs/):
+
+| Doc | What It Covers |
+|-----|---------------|
+| [Architecture](docs/architecture.md) | How the 6-step system works — abstraction hierarchy, data flow, MCP, agent dispatch, team orchestration, building your own MCP server |
+| [Demo Guide](docs/demo-guide.md) | Presenter script — exact commands, talking points, scores, fallbacks |
+| [Benchmarking](docs/benchmarking.md) | RACE framework, heuristic vs LLM scoring, DeepResearch-Bench integration |
+| [Self-Improvement](docs/self-improvement.md) | Optimization loop, eval-driven development, self-improving loops, competition strategy |
+| [Troubleshooting](docs/troubleshooting.md) | Setup issues, demo failures, common mistakes |
+
+## References
+
+- [Anthropic: Building Effective Agents](https://www.anthropic.com/research/building-effective-agents)
+- [MCP Specification](https://modelcontextprotocol.io/)
+- [Claude Code Documentation](https://docs.anthropic.com/en/docs/claude-code)
+- [rachittshah/deep-research](https://github.com/rachittshah/deep-research) — Production research plugin (4.56/5.00 on DeepResearch-Bench)
+- [Anthropic Multi-Agent Research System](https://www.anthropic.com/engineering/multi-agent-research-system)
