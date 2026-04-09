@@ -1,132 +1,212 @@
-# Build Your Research Agent
+# Build Session — Research Agent Hack
 
-## The Challenge
+You have ~90 minutes. Work in groups of 2-3.
 
-Build a research agent that scores as high as possible on the Deep Research Bench. You have 90 minutes. Work in groups of 2-3.
+**Goal:** Build a research agent that scores as high as possible on 3 unseen test problems.
+**Rule:** You write your own files. The `scaffold/` directory is your starting point — not the `step-*/` directories.
 
-Your agent will be scored on 3 unseen test problems using the **RACE framework** — the same methodology used to evaluate production deep research systems like Gemini Deep Research, Perplexity, and Claude Research.
+---
 
-## How scoring works
+## What you're building
 
-**RACE dimensions:**
-| Dimension | Weight | What it measures |
-|-----------|--------|-----------------|
-| Comprehensiveness | 30% | Coverage breadth, data support, multiple perspectives |
-| Insight | 35% | Analysis depth, causal reasoning, source conflicts |
-| Instruction Following | 20% | Addresses every part of the question, stays in scope |
-| Readability | 15% | Structure, clarity, logical flow, formatting |
-| Citation Bonus | +10% | Verifiable sources with real URLs, arXiv IDs, DOIs |
-
-**Total: 0-100.** Higher is better. Citation bonus is additive.
-
-## Quick start
-
-### 1. Verify setup
-```bash
-cd research-agent-workshop
-./verify.sh
+```
+your-agent/
+  CLAUDE.md                          ← Task 1: you write this
+  .claude/
+    settings.json                    ← copy from scaffold, edit server name
+    skills/
+      deep-research/
+        SKILL.md                     ← Task 2: you write this
+  mcp_server.py                      ← Task 3: you write this (from scaffold/mcp_skeleton.py)
 ```
 
-### 2. Start with context + skill (steps 1-2)
-```bash
-# Copy the starter files
-cp step-1-context/CLAUDE.md ./CLAUDE.md
-mkdir -p .claude/skills/deep-research
-cp step-2-skill/.claude/skills/deep-research/SKILL.md .claude/skills/deep-research/
+The `step-*/` directories are reference material. Read them to understand the pattern. Don't copy them.
 
-# Open Claude Code
+---
+
+## Task 1 — CLAUDE.md (15 min)
+
+Open `scaffold/CLAUDE.md`. Fill it in for your group's domain.
+
+Specific questions to answer:
+- What field are you in? Which subfield specifically?
+- What conferences/journals do you read? (NeurIPS, CVPR, SIGMOD — be specific)
+- What kind of evidence do you trust? (benchmarks? proofs? case studies?)
+- What citation format? (Author Year inline? Numbered? IEEE?)
+- What should Claude never do?
+
+**Test it:**
+```bash
 claude
-
-# Edit your CLAUDE.md for your group's domain expertise
-# Then run on a practice problem:
-# "Research: Compare the three main approaches to neural architecture search..."
-
-# Score it:
-python3 benchmark/evaluate.py --input output.md --quick --question "your question here"
+# Ask: "Research: What are the main approaches to [your topic]?"
+# Does the output feel like it comes from your domain?
 ```
 
-### 3. Add tools (step 3)
+Score it:
 ```bash
-# Copy the MCP server
-cp -r step-3-tool/mcp-servers ./mcp-servers
-
-# Update your SKILL.md to allow tools
-cp step-3-tool/.claude/skills/deep-research/SKILL.md .claude/skills/deep-research/
-
-# Connect the MCP server — add to .claude/settings.json:
-# "mcpServers": { "research-tools": { "command": "python3", "args": ["mcp-servers/arxiv_server.py"] } }
+python3 benchmark/evaluate.py --input output.md --quick --question "your question"
 ```
 
-### 4. Make it iterate (step 4)
+---
+
+## Task 2 — SKILL.md (30 min)
+
+Open `scaffold/.claude/skills/deep-research/SKILL.md`. Fill in all the `[TASK 2*]` sections.
+
+You need to design:
+- **Trigger phrases** — when should Claude invoke this skill?
+- **Decompose step** — how do you break a question before searching?
+- **Search strategy** — what do you search for? how many sources per sub-question?
+- **Extraction rules** — what must every claim include to count?
+- **Output format** — every section named and described
+- **Quality rules** — what's not acceptable? what should Claude always flag?
+
+Copy this to your working directory:
 ```bash
-# Replace SKILL.md with the iterative version
-cp step-4-iterative/.claude/skills/deep-research/SKILL.md .claude/skills/deep-research/
+cp scaffold/.claude/skills/deep-research/SKILL.md .claude/skills/deep-research/SKILL.md
+# (then edit it — it's your file now)
 ```
 
-### 5. Add verification (step 5)
+**Test it on practice problem 2** — it should struggle on "Q1 2026 foundation models" since that requires real-time data. That's fine. That's what the tool fixes.
+
 ```bash
-# Add the verification agent skill
-mkdir -p .claude/skills/verify-research
-cp step-5-verification/.claude/skills/deep-research/SKILL.md .claude/skills/deep-research/
-cp step-5-verification/.claude/skills/verify-research/SKILL.md .claude/skills/verify-research/
+claude
+# Ask: "Research: What new foundation models were released in Q1 2026?"
+python3 benchmark/evaluate.py --input output.md --quick --question "..."
 ```
 
-### 6. Build a team (step 6)
+---
+
+## Task 3 — MCP server (40 min)
+
+**Before writing code, answer the three design questions:**
+
+1. What does Claude need that it **can't get from WebSearch?**
+2. What format should the return be in? (structure > prose)
+3. What parameters does Claude need to pass?
+
+Then open `scaffold/mcp_skeleton.py`. Replace the `placeholder_tool` with your real tool.
+
+**Free APIs to choose from:**
+
+| API | Best for | Docs |
+|-----|---------|------|
+| OpenAlex | 250M academic papers, open access | `api.openalex.org/works?search=query` |
+| PubMed/NCBI | Biomedical papers | `eutils.ncbi.nlm.nih.gov/entrez/eutils/` |
+| CrossRef | DOI verification, citation counts | `api.crossref.org/works?query=...` |
+| Wikipedia | Background knowledge, disambiguation | `en.wikipedia.org/api/rest_v1/page/summary/` |
+| HackerNews | Tech discussions, community context | `hn.algolia.com/api/v1/search?query=...` |
+| GitHub | Code, repos, README content | `api.github.com/search/repositories` |
+| arXiv | Already done — pick something else | — |
+
+**Your tool must:**
+- Return structured text (markdown tables or lists, not HTML)
+- Have a useful docstring (write it for Claude, not for humans)
+- Handle errors without crashing (return a message)
+
+Copy skeleton to working directory and implement:
 ```bash
-# Add orchestrator + specialist skills
-mkdir -p .claude/skills/{orchestrator,searcher,critic,synthesizer}
-cp step-6-team/.claude/skills/orchestrator/SKILL.md .claude/skills/orchestrator/
-cp step-6-team/.claude/skills/searcher/SKILL.md .claude/skills/searcher/
-cp step-6-team/.claude/skills/critic/SKILL.md .claude/skills/critic/
-cp step-6-team/.claude/skills/synthesizer/SKILL.md .claude/skills/synthesizer/
+cp scaffold/mcp_skeleton.py mcp_server.py
+# Edit mcp_server.py — implement your tool
+python3 mcp_server.py  # test it runs
 ```
 
-### 7. Innovate (this is where you beat other teams)
+Connect to Claude Code — add to `.claude/settings.json`:
+```json
+{
+  "mcpServers": {
+    "my-tools": {
+      "command": "python3",
+      "args": ["mcp_server.py"]
+    }
+  }
+}
+```
 
-The steps above are the baseline. Top teams will:
-- **Design a better team structure** — add a "devil's advocate" agent, a "methodology specialist", or run searchers in parallel
-- **Build a different MCP server** — PubMed, DBLP, PapersWithCode, Google Scholar
-- **Write a custom verification tool** — DOI checker, abstract similarity comparison
-- **Optimize iteration strategy** — breadth-first vs. depth-first, convergence detection
-- **Customize for the problem domain** — different skills for different types of questions
+Update your SKILL.md `allowed-tools` to include your tool:
+```yaml
+allowed-tools: WebSearch WebFetch Read Write mcp__my-tools__your_tool_name
+```
 
-## Scoring your agent
+Test:
+```bash
+claude
+# Ask: "Research: What new foundation models were released in Q1 2026?"
+# Watch Claude call your tool. Check the output.
+python3 benchmark/evaluate.py --input output.md --quick --question "..."
+```
+
+---
+
+## Task 4 — Verification or team agent (optional)
+
+If you've completed tasks 1-3 and your score is above 60, consider adding a verification or team structure.
+
+**Verification agent:** A second Claude process that checks your output.
+- What does it look for? Hallucinated papers? Unverifiable claims? Wrong numbers?
+- Write it as a second SKILL.md in `.claude/skills/verify-research/`
+- Look at `step-5-verification/.claude/skills/verify-research/SKILL.md` as reference
+
+**Team structure:** Searcher + Critic + Synthesizer, each specialized.
+- Each has its own SKILL.md in its own folder
+- The orchestrator dispatches them via the `Agent` tool
+- Look at `step-6-team/.claude/skills/` as reference
+
+---
+
+## Scoring
 
 ```bash
-# Quick score (instant, no API call) — use this while iterating
+# While building (instant, no API call)
 python3 benchmark/evaluate.py --input output.md --quick --question "your question"
 
-# Full score (LLM-as-judge, uses API) — use for final scoring
+# Before final submission (LLM judge, more accurate)
 python3 benchmark/evaluate.py --input output.md --question "your question"
-
-# With reference report (calibrated scoring)
-python3 benchmark/evaluate.py --input output.md --reference benchmark/reference/test-2-a2a-mcp.md
 ```
 
-## Practice problems
+**Practice problems** (build against these, they're in `benchmark/practice/`):
+- `practice-1.md` — NAS comparison — warmup, well-covered in training data
+- `practice-2.md` — Q1 2026 foundation models — **use this one mainly**, forces tools
+- `practice-3.md` — MoE scaling laws — conflicting results, forces verification
 
-Use these to build and iterate (in `benchmark/practice/`):
-1. **NAS comparison** — warmup, well-covered in training data
-2. **Q1 2026 foundation models** — forces tools + iteration (training data can't answer)
-3. **MoE scaling laws** — forces verification + team (conflicting results, easy to hallucinate)
-
-## Test problems (scored for competition)
-
-When your group is ready, run on the 3 unseen test problems (in `benchmark/test/`). Your **average score across all 3** is your competition score.
-
+**Test problems** (run once when ready, scored for competition):
 ```bash
-# Run on each test problem, save outputs, score them
-python3 benchmark/evaluate.py --input test-1-output.md --quick --question "$(head -5 benchmark/test/test-1.md | tail -1)"
-python3 benchmark/evaluate.py --input test-2-output.md --quick --question "$(head -5 benchmark/test/test-2.md | tail -1)"
-python3 benchmark/evaluate.py --input test-3-output.md --quick --question "$(head -5 benchmark/test/test-3.md | tail -1)"
+# Each group runs these once and records their scores
+claude --input-file benchmark/test/test-1.md > test-1-output.md
+python3 benchmark/evaluate.py --input test-1-output.md --quick --question "$(sed -n '3p' benchmark/test/test-1.md)"
+
+claude --input-file benchmark/test/test-2.md > test-2-output.md
+python3 benchmark/evaluate.py --input test-2-output.md --quick --question "$(sed -n '3p' benchmark/test/test-2.md)"
+
+claude --input-file benchmark/test/test-3.md > test-3-output.md
+python3 benchmark/evaluate.py --input test-3-output.md --quick --question "$(sed -n '3p' benchmark/test/test-3.md)"
 ```
 
-## Presenting (top 3 teams)
+Competition score = average of all 3 test problem scores.
 
-Top 3 teams by average test score present for 2-3 minutes each. Cover:
+---
 
-1. **Score progression** — show how your score climbed as you added each step. Where was the biggest jump?
-2. **Design choices** — what MCP server did you build? How did you design iteration? What team structure?
-3. **One surprise** — something that worked unexpectedly well, or failed unexpectedly
+## What wins
 
-The audience votes for "best design" (separate from best score).
+**Highest score** = competition winner.
+
+**Best design** = audience vote. The three highest-scoring teams each present for 2-3 min:
+1. Show your score progression (where was the biggest jump?)
+2. Show your tool: function signature + docstring. Why did you choose this API?
+3. One thing that surprised you.
+
+A creative tool that scores 70 can beat a copy-paste step-6 that scores 80 on best design.
+
+---
+
+## Common pitfalls
+
+**"My SKILL.md is not getting invoked"** — check the `description` field. Does it include trigger phrases that match what you're typing?
+
+**"My MCP server isn't connecting"** — run `python3 mcp_server.py` in a separate terminal first to verify it starts. Check `.claude/settings.json` for typos.
+
+**"Score didn't improve after adding my tool"** — check your SKILL.md `allowed-tools`. The tool name must match exactly: `mcp__my-tools__your_tool_name`.
+
+**"Claude isn't using my tool"** — rewrite the docstring. Explain what the tool returns and when to prefer it over WebSearch.
+
+**"Score went down after step 4"** — normal on the heuristic. The iterative skill's process text shifts keyword patterns. Use `--question` flag and LLM scoring for accurate comparison.

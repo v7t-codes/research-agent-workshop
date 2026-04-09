@@ -27,7 +27,7 @@ mkdir -p "$OUTPUTS_DIR" "$SCORES_DIR"
 QUESTION="Provide a detailed analysis of the differences and connections between Google's A2A (Agent-to-Agent) protocol and Anthropic's MCP (Model Context Protocol). For each protocol, explain the architecture, intended use cases, and current adoption. Elaborate on what problems A2A solves that MCP does not, and vice versa. Are they complementary or competing? Cite specific implementations and technical documentation."
 
 # Common flags
-MODEL="sonnet"
+MODEL="sonnet"  # Uses latest Sonnet (currently Sonnet 4.6)
 COMMON_FLAGS="-p --output-format text --model $MODEL --dangerously-skip-permissions --no-session-persistence"
 
 # MCP config for steps 3+

@@ -60,7 +60,7 @@ python3 benchmark/evaluate.py --input final_report.md --quick --question "Provid
 echo "Provide a detailed analysis of A2A vs MCP..." | claude -p --model sonnet --disallowed-tools "WebSearch,WebFetch,Agent"
 ```
 
-**Expected: ~40-55** — decent but shallow, no verified sources.
+**Expected: ~40-55 (LLM) / ~20 (heuristic)** — decent prose but shallow, no verified sources. Heuristic penalizes missing URLs.
 
 > "Six things make the difference. You're going to see each one."
 
@@ -272,16 +272,16 @@ Show what the CRITIC caught that the single agent (step 5) missed:
 Show all scores on screen:
 
 ```
-Step 0 (raw):          54/100
-Step 1 (context):      54/100
-Step 2 (skill):        68/100  (+14)
-Step 3 (tool):         74/100  (+6)
-Step 4 (iterative):    67/100  (heuristic dip — use LLM scoring for demo)
-Step 5 (verification): 86/100  (+19, biggest jump)
-Step 6 (team):         78/100  (heuristic dip — use LLM scoring for demo)
+Step 0 (raw):          20/100
+Step 1 (context):      21/100  (+1)
+Step 2 (skill):        37/100  (+16)
+Step 3 (tool):         58/100  (+21, biggest jump)
+Step 4 (iterative):    53/100  (heuristic dip — see note)
+Step 5 (verification): 90/100  (+37)
+Step 6 (team):         93/100  (+3)
 ```
 
-> **Note:** Heuristic scoring (`--quick`) is fast but keyword-based. For the demo, use full LLM scoring (drop `--quick`) for steps 4-6 to show true quality improvements. The heuristic works well for student iteration but underscores agent-based steps.
+> **Note:** Heuristic scoring (`--quick`) applies a source grounding factor — outputs without real URLs (steps 0-2) are penalized, reflecting reliance on training data. Step 4 can dip below step 3 because the iterative skill's self-evaluation text sometimes shifts keyword patterns. For the final staircase reveal, consider using LLM scoring (drop `--quick`) which correctly ranks all steps monotonically.
 
 > "Same model. Six engineering concepts. You just saw a chatbot turn into a compound research system. Now you build yours — and try to beat our score."
 

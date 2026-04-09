@@ -1,0 +1,125 @@
+{
+  "id": 101,
+  "prompt": "Compare the three main approaches to neural architecture search (NAS): weight-sharing, evolutionary, and differentiable. For each approach, explain the core mechanism, cite at least two key papers with their results, and assess which approach is currently dominant and why.",
+  "dimension_weight": {
+    "readability": 0.15,
+    "insight": 0.35,
+    "comprehensiveness": 0.30,
+    "instruction_following": 0.20
+  },
+  "criterions": {
+    "comprehensiveness": [
+      {
+        "criterion": "Coverage of All Three NAS Approaches",
+        "explanation": "Assesses whether the article substantively covers all three specified NAS approaches (weight-sharing, evolutionary, differentiable) with sufficient depth on each, rather than skewing coverage toward one at the expense of others.",
+        "weight": 0.25
+      },
+      {
+        "criterion": "Depth of Core Mechanism Explanations",
+        "explanation": "Evaluates whether the core mechanism of each approach is explained clearly — e.g., supernet training and path sampling for weight-sharing, mutation/crossover/fitness for evolutionary, continuous relaxation and gradient descent for differentiable NAS — with enough technical detail for a reader to understand how each fundamentally works.",
+        "weight": 0.25
+      },
+      {
+        "criterion": "Citation of Key Papers with Specific Results",
+        "explanation": "Checks whether at least two key papers per approach are cited with concrete results (e.g., ENAS, One-Shot NAS for weight-sharing; AmoebaNet, NSGA-Net for evolutionary; DARTS, ProxylessNAS for differentiable) including specific accuracy numbers, search costs, or efficiency metrics.",
+        "weight": 0.25
+      },
+      {
+        "criterion": "Discussion of Computational Cost and Search Efficiency",
+        "explanation": "Assesses whether the article covers search cost differences across approaches — GPU-hours, wall-clock time, and how each approach trades off search cost against architecture quality.",
+        "weight": 0.15
+      },
+      {
+        "criterion": "Coverage of Limitations and Known Failure Modes",
+        "explanation": "Evaluates whether known weaknesses are discussed for each approach — e.g., weight-sharing's ranking correlation issues, evolutionary methods' sample inefficiency, DARTS' collapse and skip-connection dominance problems.",
+        "weight": 0.10
+      }
+    ],
+    "insight": [
+      {
+        "criterion": "Quality of Dominance Assessment with Evidence",
+        "explanation": "Evaluates whether the article provides a well-reasoned, evidence-backed assessment of which approach is currently dominant, going beyond assertion to cite adoption patterns, benchmark results, and practical considerations that justify the conclusion.",
+        "weight": 0.25
+      },
+      {
+        "criterion": "Analysis of Trade-offs Between Approaches",
+        "explanation": "Assesses whether the article provides genuine comparative analysis — not just listing pros/cons in isolation but directly comparing approaches on axes like search cost vs. architecture quality, scalability, transferability, and reproducibility.",
+        "weight": 0.25
+      },
+      {
+        "criterion": "Identification of Methodological Nuances and Confounds",
+        "explanation": "Evaluates whether the article surfaces non-obvious issues such as unfair comparisons across papers (different search spaces, training protocols), the role of the search space design itself, and how evaluation methodology affects reported results.",
+        "weight": 0.20
+      },
+      {
+        "criterion": "Discussion of Convergence and Hybrid Trends",
+        "explanation": "Assesses whether the article recognizes that modern NAS methods increasingly blend approaches (e.g., weight-sharing with differentiable relaxation, evolutionary methods with supernet evaluation) and discusses what this convergence implies for the field.",
+        "weight": 0.15
+      },
+      {
+        "criterion": "Forward-Looking Analysis of NAS Trajectory",
+        "explanation": "Evaluates whether the article offers insight into where NAS is headed — e.g., zero-cost proxies, hardware-aware NAS, NAS for non-vision tasks, or whether NAS itself is being supplanted by foundation model scaling.",
+        "weight": 0.15
+      }
+    ],
+    "instruction_following": [
+      {
+        "criterion": "Explicit Comparison Structure Across Three Approaches",
+        "explanation": "Assesses whether the article is structured as a comparison of the three specified approaches (weight-sharing, evolutionary, differentiable) rather than a general NAS survey or a deep-dive on only one method.",
+        "weight": 0.20
+      },
+      {
+        "criterion": "Core Mechanism Explained for Each Approach",
+        "explanation": "Verifies that the article explicitly explains the core mechanism for each of the three approaches, as directly requested in the prompt.",
+        "weight": 0.20
+      },
+      {
+        "criterion": "At Least Two Key Papers Cited Per Approach",
+        "explanation": "Checks whether the minimum citation requirement is met: at least two key papers with results for each of the three approaches (six total minimum).",
+        "weight": 0.20
+      },
+      {
+        "criterion": "Specific Results Provided from Cited Papers",
+        "explanation": "Evaluates whether cited papers include concrete results (accuracy numbers, search costs, FLOPs, GPU-hours) rather than vague qualitative descriptions.",
+        "weight": 0.15
+      },
+      {
+        "criterion": "Clear Dominance Assessment Provided",
+        "explanation": "Verifies that the article explicitly assesses which approach is currently dominant and provides reasoning for why, as directly requested.",
+        "weight": 0.15
+      },
+      {
+        "criterion": "Focus Maintained on NAS (Not General AutoML)",
+        "explanation": "Assesses whether the article stays focused on neural architecture search specifically, rather than drifting into broader AutoML topics like hyperparameter optimization or feature engineering.",
+        "weight": 0.10
+      }
+    ],
+    "readability": [
+      {
+        "criterion": "Logical Organization and Comparative Structure",
+        "explanation": "Assesses whether the article is organized to facilitate comparison — e.g., parallel structure across the three approaches, clear section headings, and a synthesis section — rather than presenting disconnected summaries.",
+        "weight": 0.25
+      },
+      {
+        "criterion": "Clarity of Technical Explanations",
+        "explanation": "Evaluates whether complex NAS concepts (supernet weight-sharing, differentiable relaxation, evolutionary selection pressure) are explained clearly enough for a technically literate reader who may not be a NAS specialist.",
+        "weight": 0.25
+      },
+      {
+        "criterion": "Effective Use of Tables or Structured Comparisons",
+        "explanation": "Assesses whether the article uses tables, structured lists, or other visual aids to present comparative data (search costs, accuracy, key papers) in an easily scannable format.",
+        "weight": 0.20
+      },
+      {
+        "criterion": "Smooth Transitions and Narrative Flow",
+        "explanation": "Evaluates whether the article flows logically from approach to approach and from description to analysis, with clear transitions rather than abrupt topic shifts.",
+        "weight": 0.15
+      },
+      {
+        "criterion": "Conciseness Without Sacrificing Depth",
+        "explanation": "Assesses whether explanations are appropriately concise — covering necessary technical detail without unnecessary repetition or filler text.",
+        "weight": 0.15
+      }
+    ]
+  }
+}

@@ -43,7 +43,7 @@ def search_arxiv(query: str, max_results: int = 10) -> str:
     max_results = min(max_results, 50)
     encoded_query = urllib.parse.quote(query)
     url = (
-        f"http://export.arxiv.org/api/query"
+        f"https://export.arxiv.org/api/query"
         f"?search_query=all:{encoded_query}"
         f"&start=0&max_results={max_results}"
         f"&sortBy=submittedDate&sortOrder=descending"

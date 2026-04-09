@@ -4,10 +4,10 @@
 ============================================================
 
   Comprehensiveness............. ██████████ 10/10  (weight: 30%)
-    → sections=9, numbers=18, perspectives=27, gaps=4
+    → sections=9, numbers=23, perspectives=21, gaps=13
 
-  Insight....................... ███░░░░░░░ 3/10  (weight: 35%)
-    → analysis=1, conflicts=4, forward=1, evidence_quality=0, verification=1
+  Insight....................... █████░░░░░ 5/10  (weight: 35%)
+    → analysis=0, conflicts=7, forward=2, evidence_quality=0, verification=8
 
   Instruction Following......... ████████░░ 8/10  (weight: 20%)
     → question=provided
@@ -15,11 +15,11 @@
   Readability................... ████████░░ 8/10  (weight: 15%)
     → thesis=True, sections=9, table=True, refs_section=True
 
-  Citation Bonus................ █████░░░░░ 5/10  (bonus: 10%)
-    → urls=17, titles=7, arxiv=0, years=0, dois=0
+  Citation Bonus................ ████████░░ 8/10  (bonus: 10%)
+    → urls=17, titles=3, arxiv=1, years=5, dois=0
 
 ────────────────────────────────────────────────────────────
-  TOTAL SCORE: 57.7/100
+  TOTAL SCORE: 83.5/100
 ────────────────────────────────────────────────────────────
-  ★ Strong — tool-augmented + iterative (steps 3-4)
+  ★ Excellent — verification + team level (steps 5-6)
 

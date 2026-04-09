@@ -7,7 +7,7 @@
     → sections=10, numbers=9, perspectives=23, gaps=5
 
   Insight....................... ██░░░░░░░░ 2/10  (weight: 35%)
-    → analysis=1, conflicts=1, forward=3
+    → analysis=1, conflicts=1, forward=3, evidence_quality=0, verification=0
 
   Instruction Following......... ████████░░ 8/10  (weight: 20%)
     → question=provided
@@ -19,7 +19,7 @@
     → urls=2, titles=5, arxiv=0, years=1, dois=0
 
 ────────────────────────────────────────────────────────────
-  TOTAL SCORE: 54.0/100
+  TOTAL SCORE: 20.0/100
 ────────────────────────────────────────────────────────────
-  ★ Good — tool-augmented level (step 3)
+  ★ Minimal — context only (steps 0-1)
 

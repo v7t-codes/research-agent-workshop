@@ -6,8 +6,8 @@
   Comprehensiveness............. ██████████ 10/10  (weight: 30%)
     → sections=12, numbers=26, perspectives=46, gaps=6
 
-  Insight....................... ██████░░░░ 6/10  (weight: 35%)
-    → analysis=0, conflicts=4, forward=7
+  Insight....................... ███████░░░ 7/10  (weight: 35%)
+    → analysis=0, conflicts=4, forward=7, evidence_quality=0, verification=6
 
   Instruction Following......... ████████░░ 8/10  (weight: 20%)
     → question=provided
@@ -19,7 +19,7 @@
     → urls=30, titles=31, arxiv=0, years=23, dois=0
 
 ────────────────────────────────────────────────────────────
-  TOTAL SCORE: 86.0/100
+  TOTAL SCORE: 89.5/100
 ────────────────────────────────────────────────────────────
-  ★ Excellent — compound system level (steps 5-6)
+  ★ Excellent — verification + team level (steps 5-6)
 
