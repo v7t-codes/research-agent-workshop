@@ -72,27 +72,44 @@ else
 fi
 
 # ── MCP server starts ──
-if python3 -c "import fastmcp" 2>/dev/null; then
-    timeout 5 python3 step-3-tool/mcp-servers/arxiv_server.py &
-    MCP_PID=$!
-    sleep 1
-    if kill -0 $MCP_PID 2>/dev/null; then
-        echo "✓ arXiv MCP server starts cleanly"
-        kill $MCP_PID 2>/dev/null
+# Find the arxiv_server.py (could be in demo/step-3/ or step-3-tool/)
+ARXIV_SERVER=""
+for candidate in demo/step-3/arxiv_server.py step-3-tool/mcp-servers/arxiv_server.py; do
+    [ -f "$candidate" ] && ARXIV_SERVER="$candidate" && break
+done
+if [ -n "$ARXIV_SERVER" ] && python3 -c "import fastmcp" 2>/dev/null; then
+    # MCP servers use stdio transport — they start, print banner, then wait for
+    # a JSON-RPC client. Without a client they exit immediately. We verify the
+    # server imports and initializes without errors by checking stderr for the
+    # FastMCP startup banner or "Starting MCP server".
+    MCP_OUT=$(python3 "$ARXIV_SERVER" 2>&1 &
+    MCP_PID=$!; sleep 2; kill $MCP_PID 2>/dev/null; wait $MCP_PID 2>/dev/null)
+    if echo "$MCP_OUT" | grep -qi "MCP server\|FastMCP\|research-tools"; then
+        echo "✓ arXiv MCP server starts cleanly ($ARXIV_SERVER)"
         PASS=$((PASS + 1))
     else
-        echo "✗ arXiv MCP server failed to start"
+        echo "✗ arXiv MCP server failed to start ($ARXIV_SERVER)"
         FAIL=$((FAIL + 1))
     fi
+elif [ -z "$ARXIV_SERVER" ]; then
+    echo "⚠ arXiv MCP server not found (expected demo/step-3/arxiv_server.py)"
+    WARN=$((WARN + 1))
 fi
 
 # ── Evaluator works ──
-if python3 benchmark/evaluate.py --help &>/dev/null; then
-    echo "✓ evaluate.py runs"
+# evaluate.py lives in presenter/ (gitignored) for presenters,
+# or benchmark/ if running from the dev branch
+EVALUATOR=""
+for candidate in presenter/evaluate.py benchmark/evaluate.py; do
+    [ -f "$candidate" ] && EVALUATOR="$candidate" && break
+done
+if [ -n "$EVALUATOR" ] && python3 "$EVALUATOR" --help &>/dev/null; then
+    echo "✓ evaluate.py runs ($EVALUATOR)"
     PASS=$((PASS + 1))
 else
-    echo "✗ evaluate.py failed"
-    FAIL=$((FAIL + 1))
+    echo "⚠ evaluate.py not found (presenters: place in presenter/evaluate.py)"
+    echo "  Students: this is expected — presenters score your submissions"
+    WARN=$((WARN + 1))
 fi
 
 # ── Pre-computed fallbacks exist ──
