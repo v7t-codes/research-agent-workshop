@@ -30,6 +30,24 @@ QUESTION="Provide a detailed analysis of the differences and connections between
 MODEL="sonnet"  # Uses latest Sonnet (currently Sonnet 4.6)
 COMMON_FLAGS="-p --output-format text --model $MODEL --dangerously-skip-permissions --no-session-persistence"
 
+# ── IMPORTANT: Run from a clean shell, not inside Claude Code ──
+# When this script runs inside a Claude Code session, child `claude -p` processes
+# inherit all parent MCP connections (Context7, Notion, Cosmos, etc.).
+# --disallowedTools only blocks built-in tools, not MCP tools.
+# This contaminates steps 0-2 (which should have no external tools).
+#
+# To run cleanly: open a plain terminal (not Claude Code), cd to this repo,
+# then: bash test-run/run_steps.sh
+#
+# If you must run from inside Claude Code, the MCP_EMPTY config below creates
+# a minimal server list for steps 0-2. Steps 3-6 explicitly set their servers.
+
+# Empty MCP config for steps 0-2 (overrides any inherited MCP servers)
+MCP_EMPTY_FILE="$TEST_DIR/mcp-empty.json"
+cat > "$MCP_EMPTY_FILE" << 'EMPTYEOF'
+{"mcpServers": {}}
+EMPTYEOF
+
 # MCP config for steps 3+
 MCP_CONFIG="$TEST_DIR/mcp-config.json"
 
@@ -88,6 +106,7 @@ run_step_0() {
     echo "$QUESTION" | claude $COMMON_FLAGS \
         --system-prompt "You are a helpful assistant." \
         --disallowedTools "WebSearch,WebFetch,Agent" \
+        --mcp-config "$MCP_EMPTY_FILE" \
         > "$OUTPUTS_DIR/step-0.md" 2>/dev/null || true
 
     echo "Output saved to $OUTPUTS_DIR/step-0.md ($(wc -c < "$OUTPUTS_DIR/step-0.md" | tr -d ' ') bytes)"
@@ -104,6 +123,7 @@ run_step_1() {
     echo "$QUESTION" | claude $COMMON_FLAGS \
         --system-prompt "$CONTEXT" \
         --disallowedTools "WebSearch,WebFetch,Agent" \
+        --mcp-config "$MCP_EMPTY_FILE" \
         > "$OUTPUTS_DIR/step-1.md" 2>/dev/null || true
 
     echo "Output saved to $OUTPUTS_DIR/step-1.md ($(wc -c < "$OUTPUTS_DIR/step-1.md" | tr -d ' ') bytes)"
@@ -125,6 +145,7 @@ run_step_2() {
 SKILL INSTRUCTIONS (follow this methodology):
 $SKILL" \
         --disallowedTools "WebSearch,WebFetch,Agent" \
+        --mcp-config "$MCP_EMPTY_FILE" \
         > "$OUTPUTS_DIR/step-2.md" 2>/dev/null || true
 
     echo "Output saved to $OUTPUTS_DIR/step-2.md ($(wc -c < "$OUTPUTS_DIR/step-2.md" | tr -d ' ') bytes)"

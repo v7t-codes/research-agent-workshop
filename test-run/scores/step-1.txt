@@ -3,23 +3,23 @@
   RESEARCH AGENT EVALUATION (HEURISTIC)
 ============================================================
 
-  Comprehensiveness............. █████░░░░░ 5/10  (weight: 30%)
-    → sections=8, numbers=2, perspectives=22, gaps=6
+  Comprehensiveness............. ███████░░░ 7/10  (weight: 30%)
+    → sections=10, numbers=12, perspectives=31, gaps=1
 
-  Insight....................... ████░░░░░░ 4/10  (weight: 35%)
-    → analysis=0, conflicts=4, forward=3, evidence_quality=0, verification=1
+  Insight....................... ███░░░░░░░ 3/10  (weight: 35%)
+    → analysis=0, conflicts=2, forward=2, evidence_quality=0, verification=0
 
-  Instruction Following......... ███████░░░ 7/10  (weight: 20%)
+  Instruction Following......... ████████░░ 8/10  (weight: 20%)
     → question=provided
 
-  Readability................... ██████░░░░ 6/10  (weight: 15%)
-    → thesis=True, sections=8, table=True, refs_section=False
+  Readability................... ████████░░ 8/10  (weight: 15%)
+    → thesis=True, sections=10, table=True, refs_section=True
 
-  Citation Bonus................ ██░░░░░░░░ 2/10  (bonus: 10%)
-    → urls=0, titles=7, arxiv=0, years=0, dois=0
+  Citation Bonus................ █████░░░░░ 5/10  (bonus: 10%)
+    → urls=1, titles=6, arxiv=0, years=10, dois=0
 
 ────────────────────────────────────────────────────────────
-  TOTAL SCORE: 21.1/100
+  TOTAL SCORE: 24.5/100
 ────────────────────────────────────────────────────────────
   ★ Minimal — context only (steps 0-1)
 

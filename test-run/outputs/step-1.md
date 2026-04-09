@@ -1,286 +1,298 @@
-Here is the full analysis, built directly from official specifications, Google's launch documentation, Anthropic's MCP spec, and current ecosystem data.
+Now I have the full reference document. Let me synthesize a comprehensive, citation-backed analysis.
 
 ---
 
-# A2A vs MCP: Architecture, Use Cases, Adoption, and Complementarity
+# Google A2A vs. Anthropic MCP: A Technical Comparative Analysis
 
 ---
 
-## 1. Model Context Protocol (MCP)
+## I. The Problem Both Protocols Address
 
-### Origin and Framing
+Both protocols attack a specific version of the **M×N integration problem** — connecting M models/agents to N capabilities without writing M×N custom integrations — but at different layers of the agent stack.
 
-Anthropic published MCP in **November 2024** as an open standard. The stated analogy in the specification (modelcontextprotocol.io, 2025-06-18) is to the **Language Server Protocol (LSP)**: just as LSP standardized how IDE tooling integrates programming language support across editors, MCP standardizes how LLM applications integrate external context and tools. The protocol is documented at modelcontextprotocol.io and hosted openly; Anthropic holds no vendor lock on its use.
+- **MCP** (Anthropic, November 2024) reduces model-to-tool integration from M×N → M+N
+- **A2A** (Google, announced April 9, 2025 at Cloud Next '25) reduces agent-to-agent integration from M×N → M+N
 
-### Architecture
-
-MCP follows a **Host → Client → Server** three-tier model.
-
-```
-Application Host Process
-  ├── Client 1  ──►  Server A (Files & Git, local)
-  ├── Client 2  ──►  Server B (Database, local)
-  └── Client 3  ──►  Server C (External API, remote)
-```
-
-**Host**: The LLM application (Claude Desktop, Cursor, VS Code). It manages security policy, user authorization decisions, and context aggregation across clients. It creates and controls all client instances.
-
-**Client**: Lives inside the host; maintains a 1:1 stateful session with exactly one server. Handles capability negotiation, subscriptions, and bidirectional message routing. Critically, each client is *isolated* — servers cannot "see into" each other, and no server sees the full conversation history.
-
-**Server**: A process (local subprocess or remote HTTP service) that exposes one or more of three primitive types:
-- **Tools** — callable functions with JSON Schema definitions (e.g., `query_database(sql: string) → ResultSet`)
-- **Resources** — data sources or documents the agent or user can access
-- **Prompts** — reusable templated message workflows
-
-The server can also issue requests back to the host via the client:
-- **Sampling** — request the host's LLM to generate a completion (server-initiated agentic behavior)
-- **Roots** — inquire about filesystem or URI boundaries
-- **Elicitation** — request additional information from the user
-
-### Transport and Protocol
-
-- **Wire format**: JSON-RPC 2.0 for all messages (Requests, Responses, Notifications)
-- **Local transport**: stdio (subprocess pipe) — the dominant pattern for developer tooling
-- **Remote transport**: HTTP + Server-Sent Events (SSE) for streaming
-
-Capability negotiation happens at session initialization: both sides declare what they support, and the session is constrained to the intersection. This enables backward compatibility — a client and server from different versions of the spec can still interoperate within their shared capability set.
-
-### Design Principles (per official spec)
-
-The spec (modelcontextprotocol.info, draft) enumerates four explicit principles:
-1. **Servers should be easy to build** — clear separation, minimal implementation overhead
-2. **Servers should be highly composable** — modular design, multiple servers combined seamlessly
-3. **Servers should not see the full conversation** — host enforces isolation; security boundary is architectural
-4. **Progressive capability addition** — core protocol is minimal; features negotiated at session time
-
-### Security Model
-
-MCP requires explicit **user consent** before tool invocation. The spec states: *"Users must explicitly consent to and understand all data access and operations... Hosts must obtain explicit user consent before invoking any tool."* Tool annotations (capability descriptions) are treated as untrusted unless obtained from a trusted server. This is deliberately conservative — the assumption is that tool execution is code execution and must be treated accordingly.
-
-### Adoption (as of March–April 2026)
-
-**Client support** (per AgentRank, March 2026): Claude Code, Claude Desktop, Cursor, GitHub Copilot, VS Code (native via microsoft/vscode issue #287660), Windsurf, Cline, Zed.
-
-**Server ecosystem**: 25,632 repositories indexed on AgentRank (March 2026). Official servers from Redis, MongoDB, AWS, Azure, GCP, HashiCorp, Snyk. Top categories: database access (847 repos in that category alone), DevOps automation, developer tooling.
-
-**Growth trajectory**: 2× growth Q3→Q4 2025, 2× again Q1 2026 (AgentRank). The one-server-per-integration pattern means the repository count scales with the number of distinct tools, explaining rapid proliferation.
+The layer distinction is the key architectural insight: MCP standardizes the *vertical* interface (agent ↔ resource), A2A standardizes the *horizontal* interface (agent ↔ agent). Everything else flows from this.
 
 ---
 
-## 2. Agent2Agent Protocol (A2A)
+## II. MCP: Architecture & Design
 
-### Origin and Framing
+### 2.1 Core Architecture
 
-Google DeepMind published A2A in **April 2025**, explicitly positioning it as a complement to MCP. The launch blog post (Google Developers Blog, April 9, 2025) states: *"A2A is an open protocol that complements Anthropic's Model Context Protocol (MCP), which provides helpful tools and context to agents."* It launched with contributions from **50+ technology partners** — Atlassian, Box, Cohere, Intuit, LangChain, MongoDB, PayPal, Salesforce, SAP, ServiceNow, UKG, Workday — plus major services firms including Accenture, BCG, Capgemini, Deloitte, McKinsey, PwC, TCS, and Wipro.
+MCP uses a **three-component Host–Client–Server model** (Anthropic, 2024, *modelcontextprotocol.io/specification/2025-03-26*):
 
-The stated motivation (per the launch post): enterprises are deploying multiple specialized agents built by different vendors across different frameworks. Without a coordination protocol, each integration requires custom glue code. A2A provides the standard so agents from Salesforce, SAP, and Google can collaborate on a single workflow without either vendor knowing the implementation details of the other.
+| Component | Role |
+|-----------|------|
+| **Host** | User-facing AI application (e.g., Claude Desktop, Claude Code, IDEs). Manages permissions, initiates connections, controls LLM access. |
+| **Client** | Lives inside the Host. Maintains a **stateful, one-to-one** connection per Server. Handles protocol negotiation and session. |
+| **Server** | External program (local or remote) exposing capabilities via MCP. Wraps APIs, filesystems, databases, SDKs. |
 
-### Architecture
+The orientation is clear: a single AI application seeking capabilities from multiple external servers. The Server is subordinate to the Host.
 
-A2A is structured around two roles:
+### 2.2 Three Primitives
 
-**Client Agent**: Formulates tasks, delegates work, assembles results. Analogous to an orchestrator.
+MCP standardizes three capability types that Servers expose (Anthropic spec, 2025-03-26):
 
-**Remote Agent**: Advertises capabilities, receives tasks, executes them, and returns artifacts. Analogous to a specialized sub-agent or worker.
+1. **Tools** — Executable functions (API calls, DB writes, script execution). Require JSON schema for parameters. Conceptually equivalent to LLM function calling.
+2. **Resources** — Read-only data streams (files, logs, DB records, API responses). Accessed via URI. Analogous to HTTP GET — no significant side effects.
+3. **Prompts** — Reusable instruction templates for common workflows. Typically user-selected before model invocation.
 
-The core abstractions (per a2a-protocol.org specification):
+Plus one advanced feature: **Sampling** — the Server can request an LLM completion *from the Host*, reversing the normal flow. This is the most agent-like behavior in MCP, and creates a blurry edge with A2A.
 
-**Agent Card** — A JSON manifest served at `/.well-known/agent.json` (or `/.well-known/agent-card.json` in some implementations). Describes the agent's name, capabilities, supported modalities, and authentication requirements. This is how agents discover each other — no central registry required, just HTTP discovery at a known path. Example fields: supported input/output modalities, task types the agent can handle, authentication schemes.
+### 2.3 Transport
 
-**Task** — The fundamental unit of work. Has a unique ID and a defined **status lifecycle**:
-```
-submitted → working → (input_required) → completed | failed | canceled
-```
-Tasks can complete immediately or run for hours/days with human-in-the-loop steps. The task ID allows the client to poll or receive push updates asynchronously.
+| Scenario | Transport |
+|----------|-----------|
+| Local (same machine) | **stdio** (stdin/stdout) |
+| Remote | **HTTP + Server-Sent Events (SSE)** |
 
-**Artifacts** — The outputs a remote agent produces: text, files, structured data, images, etc. Streamed back to the caller via SSE during execution.
+Messages are formatted as **JSON-RPC 2.0**. Connections are stateful (persistent sessions).
 
-**Parts** — Within each message, a "part" is a fully formed piece of content with a specified content type. This enables **user experience negotiation**: client and remote agents can negotiate whether to use iframes, web forms, video, or plain text, based on the client's declared UI capabilities.
+### 2.4 Security Model
 
-**Push Notifications** — Webhook callbacks for long-running async tasks when SSE isn't appropriate (e.g., tasks that take hours; the server calls back when done).
+MCP's security model is **consent-based and local-first**:
+- User must explicitly approve every tool execution and resource access
+- Default posture: Servers run locally, minimizing data exposure
+- Protocol specification does *not* enforce security at the protocol level — implementers are responsible (Anthropic spec, §Security Considerations)
+- Remote security (OAuth 2.0) is an **evolving addition**, not part of the initial design (Cloudflare blog, 2025)
+- MCP deliberately hides backend credentials from the LLM: the Server handles auth to downstream services
 
-### Transport and Protocol
-
-- **Transport**: HTTP with SSE for streaming results
-- **Data format**: JSON throughout
-- **Authentication**: Standard HTTP auth — OAuth 2.0, API keys, bearer tokens. The spec requires parity with OpenAPI authentication schemes.
-- **Discovery**: HTTP GET to `/.well-known/agent.json` — no special protocol required, just DNS + HTTP
-
-### Design Principles (per launch blog, April 2025)
-
-Google enumerated five explicit principles:
-1. **Embrace agentic capabilities** — agents collaborate *as agents*, not as tools; they can have memory, internal reasoning, and their own tool stacks
-2. **Build on existing standards** — HTTP, SSE, JSON-RPC; no new infrastructure needed
-3. **Secure by default** — enterprise-grade auth, OAuth 2.0 parity
-4. **Long-running task support** — from seconds to days; real-time status updates throughout
-5. **Modality agnostic** — text, audio, video streaming supported
-
-### Adoption (as of March–April 2026)
-
-**Framework support**: Google ADK (native, one-line `to_a2a()` wrapper), LangGraph, CrewAI, Salesforce Agentforce, SAP Joule.
-
-**Enterprise integrations**: Salesforce, SAP, ServiceNow, Atlassian Rovo, UiPath, UKG — all committed at launch to implementing A2A-compatible agents.
-
-**Repository count**: ~2,400 indexed on AgentRank (March 2026). Concentrated in three categories: Agent Development Kits (Google ADK, LangGraph, CrewAI), orchestration layers, and enterprise adapters wrapping Salesforce/SAP/ServiceNow as A2A-compatible agents.
-
-The 10× gap in repo count vs MCP reflects both MCP's earlier launch (5 months earlier) and the structural difference: MCP servers are often single-purpose point integrations (one repo per tool), while A2A implementations are typically heavier orchestration frameworks.
+⚠️ **Inference**: The local-first, consent-first security design reflects MCP's origin context — connecting a desktop app to user-permissioned resources — rather than inherently untrusted network communications. This creates real friction for enterprise deployment at scale.
 
 ---
 
-## 3. Side-by-Side Comparison
+## III. A2A: Architecture & Design
+
+### 3.1 Core Architecture
+
+A2A uses a **client-server model where both sides are agents** (google/A2A GitHub repo):
+
+| Component | Role |
+|-----------|------|
+| **Client Agent** | Agent (or app) initiating task delegation. Sends Tasks to remote agents. |
+| **Server Agent** | Agent exposing HTTP endpoints implementing A2A methods. Accepts Tasks, manages execution, returns results. |
+
+Crucially: **a single agent can be both Client and Server simultaneously**, enabling genuine peer-to-peer topologies. This is fundamentally different from MCP's asymmetric Host-controls-Server model.
+
+### 3.2 Core Concepts
+
+A2A introduces four primary abstractions (google/A2A GitHub, April 2025):
+
+| Concept | Description |
+|---------|-------------|
+| **Agent Card** | JSON metadata served at `/.well-known/agent.json`. Contains: identity, endpoint URL, skills, auth requirements, supported modalities, protocol features. Acts as a "digital business card" for machine-readable discovery. |
+| **Task** | Central unit of work. Has a unique ID and progresses through states: `submitted → working → input-required → completed / failed / canceled`. |
+| **Message** | Single turn in dialogue within a Task. Roles: `user` (client) or `agent` (server). Contains one or more Parts. |
+| **Part** | Atomic content unit. Types: `TextPart`, `FilePart` (inline base64 or URI), `DataPart` (structured JSON). The foundation of multimodal support. |
+| **Artifact** | Tangible Task output (generated doc, structured result, image). Also composed of Parts. |
+
+### 3.3 Communication Mechanisms
+
+A2A offers **three asynchronous patterns** (google/A2A spec):
+
+| Pattern | Method | Use Case |
+|---------|--------|----------|
+| Synchronous | `tasks/send` | Quick, short-lived tasks |
+| Streaming | `tasks/sendSubscribe` + SSE | Real-time feedback, incremental results |
+| Push/Webhook | `tasks/pushNotification/set` + HTTP POST | Long-running tasks (hours/days), disconnected clients |
+
+Transport: HTTP/HTTPS with modern TLS. Message format: JSON-RPC style. The dual SSE + webhook support is architecturally significant — it directly acknowledges that multi-agent workflows often run over timescales where persistent connections are impractical.
+
+### 3.4 Security Model
+
+A2A takes an **enterprise-grade, authentication-first** approach:
+- "Secure by default" is a stated design principle (Google Developers Blog, April 2025)
+- Agent Card specifies required authentication methods, aligned with **OpenAPI auth schemes** (OAuth 2.0, API Keys, etc.)
+- Focus: securing interactions between potentially untrusted, independent agents
+- This reflects an enterprise-deployment-first design, contrasting with MCP's user-consent-first posture
+
+---
+
+## IV. Feature Comparison Matrix
+
+| Feature | MCP (Anthropic, Nov 2024) | A2A (Google, Apr 2025) |
+|---------|--------------------------|------------------------|
+| **Primary abstraction** | Agent ↔ Resource (tool/data) | Agent ↔ Agent |
+| **Architecture** | Host–Client–Server (asymmetric) | Client-Server where both sides are agents (symmetric) |
+| **Discovery** | Host-initiated, after connection is established | Decentralized via `/.well-known/agent.json` (pre-connection) |
+| **Core units** | Tools, Resources, Prompts | Tasks, Messages, Parts, Artifacts |
+| **Async support** | SSE via stateful connections | Explicit: request/response + SSE streaming + webhook push |
+| **Long-running tasks** | Not explicitly addressed | First-class: webhook push notifications for hours/days-long tasks |
+| **Multimodality** | Data exchange via Resources/Tool params; no explicit media primitives | Native: TextPart, FilePart, DataPart; audio/video in roadmap |
+| **UX negotiation** | Not present | Agent-to-agent negotiation of UI requirements (forms, video, etc.) |
+| **Opaque agent support** | N/A (Server internals irrelevant to protocol) | Explicit design goal: agents need not share internal state/memory |
+| **Security model** | User consent + local-first; remote OAuth evolving | Enterprise auth from day one; OpenAPI-aligned; Agent Card declares requirements |
+| **State management** | Client-side; session per connection | Server-side Task lifecycle with explicit state machine |
+| **Peer-to-peer** | No (Host is always orchestrator) | Yes (same agent can be Client and Server) |
+| **Message format** | JSON-RPC 2.0 | JSON-RPC style |
+| **Transport** | stdio (local), HTTP+SSE (remote) | HTTP/HTTPS, SSE, webhooks |
+
+---
+
+## V. What Each Protocol Solves That the Other Doesn't
+
+### 5.1 Problems MCP Solves That A2A Does Not
+
+**1. Standardized tool/resource access for individual agents**
+MCP's three primitives (Tools, Resources, Prompts) provide a clean, language-agnostic contract for connecting one agent to many external services. A2A has no equivalent mechanism for a single agent accessing non-agent external systems.
+
+**2. The M+N tool integration problem at the model layer**
+MCP's value proposition is explicit: N tool builders write MCP Servers once, M agent builders write MCP Clients once. Before MCP, each (model, tool) pair needed a custom integration. There is no A2A equivalent for this.
+
+**3. Credential isolation from the LLM**
+MCP's design explicitly prevents LLM access to backend API keys — the Server handles auth to downstream services. A2A doesn't address this (it operates at the agent-agent boundary, not agent-backend boundary).
+
+**4. Local execution with minimal surface area**
+MCP's stdio transport and local-first model allows tools to run with no network exposure. A2A is inherently network-based.
+
+**5. Prompt templating and workflow scaffolding**
+MCP's Prompts primitive provides reusable instruction templates that the Host surfaces to users. A2A has no equivalent.
+
+### 5.2 Problems A2A Solves That MCP Does Not
+
+**1. Agent discovery at runtime**
+The Agent Card (`/.well-known/agent.json`) enables an agent to find collaborators it has never been configured to know about. MCP has no discovery mechanism — the Host must know about Servers in advance.
+
+**2. Peer-to-peer agent collaboration across vendors/frameworks**
+A2A's core purpose: a LangChain agent, a Google ADK agent, and a CrewAI agent can interoperate without any shared infrastructure. MCP has no mechanism for agent-to-agent communication — it only connects agents to tools.
+
+**3. Long-running task state management**
+The A2A Task state machine (`submitted → working → input-required → completed/failed/canceled`) provides a standardized lifecycle contract. MCP has no equivalent; tool calls are stateless from the protocol's perspective.
+
+**4. Human-in-the-loop coordination**
+The `input-required` Task state explicitly signals that a human decision is needed mid-workflow, with the connection persisted or resumable. MCP has no such mechanism.
+
+**5. Asynchronous task completion over hours/days**
+A2A's webhook push notifications allow a Client to register a callback URL and disconnect — the Server POSTs results when done. MCP's SSE-based connections are persistent and would break for multi-hour tasks.
+
+**6. Multimodal agent communication**
+FilePart and DataPart primitives enable structured file exchange, form submission, and structured data between agents. MCP can transfer data but has no standardized multimodal dialogue protocol between agents.
+
+**7. "Opaque" interoperability**
+A2A is designed for agents that are black boxes to each other — no shared memory, no shared tool access. This is the enterprise reality: you integrate with a vendor's agent, not its internals. MCP's design assumes the Host has configuration-level access to all Servers.
+
+---
+
+## VI. Are They Complementary or Competing?
+
+**Google's official position**: Complementary. Google published documentation explicitly titled "A2A ❤️ MCP" illustrating hybrid architectures where both protocols coexist. The stated analogy: MCP provides the tools each mechanic (agent) uses; A2A provides the language for mechanics to coordinate.
+
+**The layered hybrid architecture** (this is the technically correct reading):
+
+```
+[User]
+  ↓
+[Orchestrator Agent]
+  ↓ A2A (task delegation, discovery, coordination)
+[Specialized Agent A]        [Specialized Agent B]
+  ↓ MCP (tool access)          ↓ MCP (tool access)
+[DB Server] [API Server]    [Search] [Calendar API]
+```
+
+In the HR recruiting example (google/A2A docs): the primary HR agent uses A2A to discover and task a sourcing agent; the sourcing agent uses MCP internally to connect to LinkedIn's API and the ATS database; the sourcing agent returns candidate profiles as an A2A Artifact; a scheduling agent is tasked via A2A and uses MCP to access calendar APIs. Both protocols are active simultaneously at different layers.
+
+**Where competition exists** (inference, not consensus):
+
+The protocols have functional overlap at their edges:
+- An A2A Server can act as a thin wrapper around a tool, making it functionally equivalent to an MCP Tool. If a developer needs to call a Python function remotely, they could implement it as either.
+- MCP's Sampling feature (Server requests LLM completion from Host) creates dialogue-like patterns that approach A2A's conversational model.
+- Developer choice of framing — "is this capability an *agent* or a *tool*?" — determines which protocol applies. That framing is often subjective.
+
+The absence of Anthropic and OpenAI from A2A's April 2025 launch partner list (despite 50+ other companies signing on) is a concrete signal of tension, not just complementarity (Koyeb blog, "A2A and MCP: Start of the AI Agent Protocol Wars?"). Whether this reflects genuine architectural disagreement or competitive positioning is unclear.
+
+**Verdict**: They are **architecturally complementary** (different layers) but **competitively positioned** (overlapping at the margins, with different vendor backing). The market outcome will likely be determined by developer adoption velocity — MCP has an ~5-month head start and broad community traction; A2A has stronger enterprise backing and more explicit async/multimodal features.
+
+---
+
+## VII. Adoption Status (as of April 2026)
+
+### MCP
+- Launched: November 2024 (Anthropic, *anthropic.com/news/model-context-protocol*)
+- Official spec: `modelcontextprotocol.io/specification/2025-03-26`
+- Adopters: Claude Desktop, Claude Code, Zed, Replit, Codeium, and a large community MCP server ecosystem
+- SDKs: Python, TypeScript (official); community SDKs for Go, Rust, Java, C#
+- Notable: Hundreds of MCP Servers published for GitHub, PostgreSQL, Slack, Google Drive, Blender, etc.
+- ⚠️ **[Potentially outdated — 5+ months of evolution not captured here]**
+
+### A2A
+- Launched: April 9, 2025 (Google Cloud Next '25)
+- Spec repo: `github.com/google/A2A`
+- Launch partners: 50+ companies including Salesforce, SAP, ServiceNow, Workday, Deloitte, Accenture (Google Developers Blog, 2025)
+- Framework integrations: Google ADK, LangGraph, CrewAI, Semantic Kernel, LlamaIndex announced at launch
+- Notable absent: Anthropic, OpenAI
+- arXiv preprint on secure A2A implementation: arxiv.org/html/2504.16902 (April 2025)
+- ⚠️ **[Newer protocol — adoption trajectory requires more recent data]**
+
+---
+
+## VIII. Specific Implementation Details Worth Tracking
+
+**MCP Server skeleton** (FastMCP pattern, as used in this workshop's `step-3-tool/mcp-servers/arxiv_server.py`):
+```python
+from fastmcp import FastMCP
+mcp = FastMCP("arxiv")
+
+@mcp.tool()
+def search_arxiv(query: str, max_results: int = 10) -> list[dict]:
+    # returns structured paper metadata
+```
+
+**A2A Agent Card** (served at `/.well-known/agent.json`):
+```json
+{
+  "name": "Candidate Sourcing Agent",
+  "description": "Searches and ranks job candidates",
+  "url": "https://agent.example.com/",
+  "skills": [{"id": "source-candidates", "name": "Source Candidates"}],
+  "authentication": {"schemes": ["Bearer"]},
+  "capabilities": {"streaming": true, "pushNotifications": true}
+}
+```
+
+**A2A Task initiation** (`tasks/send` method):
+```json
+{
+  "jsonrpc": "2.0", "method": "tasks/send",
+  "params": {
+    "id": "task-123",
+    "message": {
+      "role": "user",
+      "parts": [{"type": "text", "text": "Find 10 senior ML engineers in NYC"}]
+    }
+  }
+}
+```
+
+---
+
+## IX. Summary
 
 | Dimension | MCP | A2A |
-|---|---|---|
-| **Axis** | Vertical: agent → tool/data | Horizontal: agent → agent |
-| **Core question** | "What tools can I use?" | "What agents can I hire?" |
-| **Primary abstraction** | Tools, Resources, Prompts | Tasks, Artifacts, Agent Cards |
-| **Who talks to what** | Agent to deterministic APIs/tools | Autonomous agent to autonomous agent |
-| **Computation model** | Synchronous function call | Async task with lifecycle |
-| **Transport (local)** | stdio subprocess | N/A (inherently networked) |
-| **Transport (remote)** | HTTP + SSE | HTTP + SSE |
-| **Discovery** | Protocol-native `tools/list` at session start | HTTP GET to `/.well-known/agent.json` |
-| **Session model** | Stateful, persisted session | Stateless per task (ID-correlated) |
-| **Auth** | Env vars or header injection at transport | OAuth 2.0, API keys, bearer (HTTP-native) |
-| **Long-running ops** | Not natively designed for this | First-class (task lifecycle + push notifications) |
-| **UI/modality negotiation** | No | Yes (Parts with content-type negotiation) |
-| **Published by** | Anthropic (Nov 2024) | Google DeepMind (Apr 2025) |
-| **GitHub repos** | 25,632 (AgentRank, Mar 2026) | ~2,400 (AgentRank, Mar 2026) |
-| **Client support** | All major AI coding tools | Google ADK, LangGraph, CrewAI |
+|-----------|-----|-----|
+| **Layer** | Agent → Tool/Resource | Agent → Agent |
+| **Key innovation** | M+N integration for tools | Dynamic discovery + Task lifecycle |
+| **Killer feature** | Simplicity — 3 primitives, works locally | Async (webhooks) + opaque agent interop |
+| **Security design** | Consent-first, local-first | Auth-first, enterprise-first |
+| **Head start** | ~5 months; broad community traction | Strong enterprise partner list |
+| **Relationship** | Vertical (tool layer) | Horizontal (coordination layer) |
+| **Verdict** | Best for: single agent + tool access | Best for: multi-agent orchestration |
+
+MCP solves "how does my agent use tools." A2A solves "how do my agents use each other." A production multi-agent system needs both.
 
 ---
 
-## 4. What Problems Each Solves That the Other Does Not
+## References
 
-### MCP-only problems
-
-**1. Standardized, zero-overhead tool access.**
-Before MCP, connecting an agent to an external system required writing a custom JSON Schema function definition *per model* and *per client*. An MCP server written once works identically in Claude Desktop, Cursor, GitHub Copilot, and VS Code. The Alpha Vantage MCP server (per Samplay, Google Cloud Community, March 2026) exposes 60+ financial data tools via a single HTTP endpoint — the agent discovers all of them at startup without any manual schema definitions.
-
-**2. Local-first, process-level integration.**
-The stdio transport allows MCP servers to run as local subprocesses — reading files, querying local databases, running shell commands — without any network exposure. This is central to coding assistants: Claude Code's file system access, git operations, and terminal execution all run via MCP over stdio.
-
-**3. Fine-grained, user-visible consent.**
-MCP's security model requires explicit per-tool user consent. This is a UX capability that A2A doesn't address — A2A assumes enterprise-level authentication but doesn't specify per-action user approval flows.
-
-**4. Context/Resource sharing.**
-MCP's Resources primitive allows agents to share structured data (documents, database records, API responses) as part of the session context. This has no direct A2A equivalent — A2A passes task artifacts, not session-scoped resources.
-
-**5. Cross-client portability today.**
-MCP has 7+ major AI client integrations. A2A's client support is concentrated in Google ADK and a few orchestration frameworks. If you want an integration that works across all AI coding tools, MCP is the only viable choice today.
-
-### A2A-only problems
-
-**1. Delegating to autonomous, non-deterministic sub-agents.**
-MCP tools are *deterministic functions* — clear inputs, clear outputs, synchronous execution. An A2A agent is an autonomous process: it can run its own reasoning loop, call its own tools (via MCP), handle uncertainty, and produce outputs that take seconds to hours. The distinction is explicit in the AgentRank analysis (March 2026): *"If you'd be tempted to put an LLM inside your MCP tool handler, you probably want an A2A agent instead."*
-
-**2. Cross-vendor agent interoperability.**
-This is A2A's primary enterprise motivation (Google Developers Blog, April 2025). A Salesforce CRM agent and an SAP ERP agent can collaborate on a customer workflow without either knowing the other's implementation. The Agent Card is the entire contract — discovery, capability description, and auth requirements in a single JSON document. MCP has no equivalent mechanism for inter-agent trust and capability advertisement.
-
-**3. Long-running task management.**
-The task lifecycle (`submitted → working → completed/failed`) with SSE streaming and push notification webhooks is designed for operations that span minutes to days, potentially with human-in-the-loop checkpoints. The MCP spec's request-response model (per modelcontextprotocol.io, 2025-06-18) includes progress tracking and cancellation, but it is not architected around multi-hour async workflows with external callback patterns.
-
-**4. Streaming progressive outputs.**
-A2A's Artifacts system streams partial results back via SSE as the remote agent works. An orchestrator can display incremental progress (e.g., a research agent returning article summaries as it finds them) without waiting for the entire task to complete. MCP does support streaming responses but within a single synchronous tool call.
-
-**5. UI/modality negotiation.**
-Each A2A message includes "parts" with specified content types, and the protocol supports explicit negotiation of what the client's UI can render (iframes, video, web forms). MCP has no equivalent — it returns tool results and trusts the host to render them.
-
-**6. Agent specialization at scale.**
-The philosophical bet in A2A is that monolithic agents hit capability and cost ceilings — you want a research agent, a code agent, a data analyst, each specialized and independently maintained. A2A provides the coordination layer that lets these specialists compose into a system. MCP cannot express this architecture.
-
----
-
-## 5. Are They Complementary or Competing?
-
-**They are explicitly complementary, and Google said so at A2A's launch.**
-
-The Google Developers Blog (April 9, 2025) states directly: *"A2A is an open protocol that complements Anthropic's Model Context Protocol (MCP)."* This is not marketing hedging — it reflects a genuine architectural separation.
-
-The reference architecture that has emerged in production (documented in AgentRank March 2026 and implemented in Google ADK) is:
-
-```
-User
-  │
-  ▼
-Orchestrator Agent
-  │  (A2A: capability discovery via Agent Cards)
-  ├──► Research Agent  ──► [MCP: web search, database tools]
-  ├──► Code Agent      ──► [MCP: filesystem, git, terminal]
-  ├──► Data Agent      ──► [MCP: SQL, analytics APIs]
-  └──► Writer Agent    ──► [MCP: document editing tools]
-              │
-              ▼
-        Assembled Result (via A2A Artifacts)
-```
-
-**A2A operates horizontally** (between agents at the same level of abstraction). **MCP operates vertically** (between an agent and the tools/data it uses). They serve different layers of the stack and do not overlap in their core use cases.
-
-The only point of *apparent* competition is at the boundary: could you wrap an MCP server as an A2A agent? Technically yes — and this is done when the MCP tool is complex enough to warrant its own reasoning loop. But this is composition, not conflict.
-
-**Google ADK makes the complementarity concrete in code** (per Samplay, Google Cloud Community, March 2026):
-
-```python
-# MCP: give the agent its tools
-toolset = McpToolset(
-    connection_params=StreamableHTTPConnectionParams(url=MCP_URL)
-)
-root_agent = LlmAgent(model="gemini-2.5-flash", tools=[toolset, ...])
-
-# A2A: expose the agent as a network service for other agents to hire
-a2a_app = to_a2a(root_agent, port=10000)
-# Now accessible at GET /.well-known/agent-card.json and POST /
-```
-
-`McpToolset` and `to_a2a()` are different layers of the same ADK framework — one gives the agent capabilities, the other exposes the agent to the network. They don't interfere.
-
----
-
-## 6. Security and Identity
-
-Auth0 (Johnson, July 10, 2025) identified the emerging security gap: *"Whether an agent is calling a tool via MCP or delegating to another agent via A2A, we need ways to: authenticate agent identities, control what they can access, trace their behavior."*
-
-- **MCP security** is user-consent-centric: the user approves each tool invocation; the host enforces isolation between servers; servers cannot see the full conversation.
-- **A2A security** is enterprise-auth-centric: OAuth 2.0, API keys, bearer tokens at the HTTP layer; Auth0 is formally partnering with Google Cloud to define the A2A auth spec (Auth0 blog, July 2025).
-
-Neither protocol alone solves the full identity problem for multi-agent systems. MCP handles *user → agent* trust; A2A is building out *agent → agent* trust. The field notes that agent identity (proving that "this request came from a legitimate Salesforce agent, not an impersonator") is still an open problem at the protocol level.
-
----
-
-## 7. Current Limitations and Open Questions
-
-**MCP limitations** (flagged in the spec):
-- No native multi-agent coordination — you can run multiple MCP servers per host, but agents don't communicate through MCP
-- The stdio transport is local-only; remote MCP requires HTTP+SSE setup
-- Sampling (server-requesting an LLM completion) is implemented inconsistently across hosts
-
-**A2A limitations** (per ecosystem data):
-- Much smaller client ecosystem — not yet supported in Claude Desktop, Cursor, or Copilot directly
-- Agent Card discovery is HTTP-pull, not broadcast — no registry or discovery mesh
-- The spec (as of April 2025) was still in draft; a production-ready version was planned for "later 2025" (per launch blog)
-- Smaller open-source ecosystem (~2,400 repos vs 25,632 for MCP) means fewer off-the-shelf implementations
-
----
-
-## 8. Summary for Research Purposes
-
-| Question | Answer |
-|---|---|
-| What is MCP? | Anthropic's standard for agent→tool/data access. Published Nov 2024. |
-| What is A2A? | Google's standard for agent→agent task delegation. Published Apr 2025. |
-| Key MCP primitive | Tool (callable function with JSON Schema) |
-| Key A2A primitive | Task (unit of work with lifecycle) + Agent Card (capability manifest) |
-| Are they competing? | No — explicitly complementary by design and by Google's own statement |
-| Reference architecture | A2A coordinates between agents; MCP gives each agent its tools |
-| Dominant implementation | Google ADK natively implements both (`McpToolset` + `to_a2a()`) |
-| MCP ecosystem size | 25,632 GitHub repos (AgentRank, Mar 2026); every major AI client |
-| A2A ecosystem size | ~2,400 GitHub repos (AgentRank, Mar 2026); concentrated in enterprise frameworks |
-| Best single-protocol choice | MCP if you need tools; A2A if you need multi-agent orchestration; both for production systems |
-
----
-
-*Note: As of April 2026, A2A was approximately 11 months old. Ecosystem data and spec details should be verified against the current a2aproject/A2A GitHub and modelcontextprotocol.io for any updates.*
-
-ENDOFFILE
-echo "Saved"</parameter>
-<parameter name="description">Save comprehensive research analysis to sources directory</parameter>
-</invoke>
+1. Anthropic (2024). *Introducing the Model Context Protocol*. anthropic.com/news/model-context-protocol
+2. Anthropic (2025). *MCP Specification 2025-03-26*. modelcontextprotocol.io/specification/2025-03-26
+3. Google (2025). *Announcing the Agent2Agent Protocol (A2A)*. developers.googleblog.com/en/a2a-a-new-era-of-agent-interoperability/
+4. google/A2A GitHub repository. github.com/google/A2A
+5. Blott Studio (2025). *How the Agent2Agent Protocol (A2A) Actually Works*. blott.studio/blog/post/how-the-agent2agent-protocol-a2a-actually-works-a-technical-breakdown
+6. Koyeb (2025). *A2A and MCP: Start of the AI Agent Protocol Wars?* koyeb.com/blog/a2a-and-mcp-start-of-the-ai-agent-protocol-wars
+7. Cloudflare (2025). *Build and deploy Remote MCP servers*. blog.cloudflare.com/remote-model-context-protocol-servers-mcp/
+8. Humanloop (2025). *Model Context Protocol (MCP) Explained*. humanloop.com/blog/mcp
+9. ResearchGate (2025). *Comprehensive Analysis of Google's Agent2Agent (A2A) Protocol*. DOI via researchgate.net/publication/390694531
+10. arXiv (2025). *Building A Secure Agentic AI Application Leveraging Google's A2A Protocol*. arxiv.org/html/2504.16902
+11. W&B (2025). *Google's Agent2Agent (A2A) protocol: A new standard for AI agent collaboration*. wandb.ai/onlineinference/mcp/reports/...

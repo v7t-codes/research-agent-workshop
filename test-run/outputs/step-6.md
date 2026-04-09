@@ -1,382 +1,280 @@
-Quality check passed:
-- ✅ Addresses all original sub-questions (architecture, use cases, adoption, differential problem-solving, complementary vs competing)
-- ✅ All claims attributed inline; evidence quality ratings throughout
-- ✅ Critic's corrections integrated (AAIF governance, ACP merger, MCP Tasks overlap, P2P nuance, TCK gap, Microsoft role)
-- ✅ No executive summary filler; technically dense throughout
+The research team produced a verified, fully-cited analysis. Here's the final report:
 
 ---
 
-# MCP and A2A: Protocol Architecture, Use Cases, and the AAIF Convergence
+# A2A vs MCP: Architecture, Use Cases, and Ecosystem Comparison
 
-**Thesis:** The "Anthropic's MCP vs. Google's A2A" framing is technically obsolete as of December 2025 — both protocols are now co-governed under the **Agentic AI Foundation (AAIF)**, a Linux Foundation project with Anthropic, Google, Microsoft, AWS, OpenAI, and Block as platinum members, rendering the competitive narrative a mid-2025 artifact rather than an accurate description of the April 2026 landscape.
+## Thesis
 
----
-
-## 1. Protocol Origins and Governance Timeline
-
-### MCP: Anthropic Origin, AAIF Governance
-
-MCP was announced by Anthropic on **November 25, 2024** (Anthropic, 2024). It remained under Anthropic stewardship through the **2025-11-25 spec** — the most recent version confirmed in this research. The formal donation to AAIF occurred on **December 9, 2025**, two weeks *after* the spec described throughout this report. Any language describing MCP as "community-governed" before that date is misleading.
-
-**Spec version history (confirmed):**
-| Version | Date | Key Change |
-|---|---|---|
-| Initial release | 2024-11-05 | HTTP+SSE transport |
-| 2025-03-26 | March 2025 | Streamable HTTP introduced (replaces HTTP+SSE — architecturally significant) |
-| Current confirmed | 2025-11-25 | Tasks (experimental), Elicitation, tool `outputSchema`, icons, `MCP-Protocol-Version` header required |
-
-> ⚠️ **Evidence quality note:** The research date is April 2026. A post-2025-11-25 spec version likely exists. Verify at modelcontextprotocol.io. MCP Tasks' experimental status may have graduated to stable.
-
-### A2A: Google Origin, Linux Foundation Absorption of IBM ACP Competitor
-
-A2A was announced by Google on **April 9, 2025** (Google Developers Blog, 2025). The governance timeline is more complex than typically presented:
-
-| Date | Event |
-|---|---|
-| April 9, 2025 | Google launches A2A with 50+ named partners |
-| June 23, 2025 | A2A donated to Linux Foundation; 100+ supporting organizations |
-| August–September 2025 | **IBM's Agent Communication Protocol (ACP)** — a direct A2A competitor with REST-first design — merges into A2A; IBM Research's Kate Blair joins A2A Technical Steering Committee |
-| December 9, 2025 | Both A2A and MCP come under shared **AAIF** governance |
-| March 12, 2026 | A2A **v1.0.0** released |
-
-**Critical gap in most analyses:** The ACP merger means A2A v1.0.0 is not purely Google's design — it incorporates IBM Research's preferences for simplified REST accessibility alongside Google's original Agent Card + SSE architecture.
-
-### AAIF: Shared Governance Roof
-
-The Agentic AI Foundation (AAIF) was announced December 9, 2025. Platinum members: Anthropic, Google, Microsoft, AWS, OpenAI, Block, Bloomberg, Cloudflare. AAIF-reported metrics (February 2026, *credible but primary source not directly retrieved in this research*): **10,000+ active MCP servers**, **97 million monthly SDK downloads**.
+MCP and A2A are structurally complementary — MCP standardizes vertical agent-to-tool connections while A2A standardizes horizontal agent-to-agent coordination — but they compete for developer mindshare in the middle layer, where the choice of which to adopt first has compounding ecosystem consequences.
 
 ---
 
-## 2. Architecture
+## 1. Protocol Architectures
 
-### 2.1 MCP Architecture
+### MCP (Model Context Protocol)
 
-MCP uses a **client-server hub-and-spoke topology** with three participants (MCP Spec, 2025-11-25):
+Launched by Anthropic in November 2024. Design metaphor: "USB-C port for AI applications" — replace N×M bespoke integrations with a single N+M standard.
 
-- **Host:** The AI application (Claude Desktop, VS Code Copilot) — manages connections, coordinates multiple clients
-- **Client:** Within the host; maintains a dedicated 1:1 connection to one MCP server
-- **Server:** Exposes tools, resources, and prompts
+**Participants:**
+- **MCP Host** — the AI app (Claude Desktop, VS Code, Cursor)
+- **MCP Client** — one instance per server connection, inside the host
+- **MCP Server** — exposes data or tools to the host
 
-**Protocol layers:**
-
-| Layer | Detail |
-|---|---|
-| Data | JSON-RPC 2.0 |
-| Transport (local) | **stdio** — for local processes; zero network overhead |
-| Transport (remote) | **Streamable HTTP** — HTTP POST + optional SSE upgrade |
-
-**Authorization:** OAuth 2.1 with PKCE; Resource Indicators (RFC 8707); Protected Resource Metadata (RFC 9728). Authorization is **OPTIONAL** — not enforced at protocol level.
-
-**Initialization sequence:**
-1. Client → `initialize` (protocolVersion + capabilities)
-2. Server → capabilities response
-3. Client → `notifications/initialized`
-4. Operation phase; shutdown via transport close
+**Two protocol layers:**
+- *Data layer:* JSON-RPC 2.0 message semantics, lifecycle management, primitive definitions
+- *Transport layer:* (1) stdio for local processes — no network overhead; (2) Streamable HTTP (POST + optional SSE) for remote, with OAuth
 
 **Server-exposed primitives:**
+- *Tools* — executable functions (file ops, API calls, DB queries); model-controlled
+- *Resources* — data sources for context; application-controlled
+- *Prompts* — reusable LLM interaction templates; user-controlled
 
-| Primitive | Controlled by | Description |
+**Client-exposed primitives:** Sampling (servers request LLM completions), Elicitation, Logging.
+
+**Lifecycle:** Initialize → capability negotiation → initialized notification → operation → terminate. Stateful by default; stateless via Streamable HTTP.
+
+**Spec version:** 2025-11-25. Design precedent: Language Server Protocol (LSP).
+
+*Sources: modelcontextprotocol.io; MCP Anniversary Blog, Nov 25 2025.*
+
+---
+
+### A2A (Agent-to-Agent)
+
+Launched by Google on April 9, 2025. Defining principle: the **opaque agent** — agents declare capabilities but never disclose internal tools, memory, or proprietary algorithms.
+
+**Two roles:** *Client agent* (formulates tasks) and *Remote agent* (executes tasks).
+
+**Transport (v1.0.0, March 2026):**
+- JSON-RPC 2.0 over HTTP/WebSocket
+- gRPC (binary Protocol Buffers, added v0.3)
+- HTTP/REST
+- All bindings must achieve "functional equivalence"
+
+**Agent Cards:** JSON metadata at `/.well-known/agent-card.json` declaring name, description, capabilities, skills, security schemes, and interfaces. v1.0 adds cryptographic signing for cross-org identity.
+
+**Task lifecycle (8 states):** QUEUED → WORKING → INPUT_REQUIRED / AUTH_REQUIRED → COMPLETED / FAILED / CANCELED / REJECTED
+
+**Core operations:** SendMessage, SendStreamingMessage, GetTask, ListTasks, CancelTask, SubscribeToTask, GetExtendedAgentCard
+
+**Authentication:** API keys, OAuth 2.0 (Auth Code, Client Credentials, Device Code per RFC 8628), OpenID Connect, Mutual TLS. Implicit/password OAuth removed in v1.0.
+
+**Architecture:** Stateless by design (v1.0); single endpoint hosts many agents (multi-tenancy).
+
+*Sources: Google Developers Blog (April 9, 2025); a2a-protocol.org spec v1.0.0; GitHub a2aproject/A2A.*
+
+---
+
+### Side-by-Side Architectural Comparison
+
+| Dimension | MCP | A2A |
 |---|---|---|
-| **Tools** | Model | Executable functions — `tools/list`, `tools/call`; can declare `outputSchema` |
-| **Resources** | Application | Data sources — `resources/list`, `resources/read`, `resources/subscribe` |
-| **Prompts** | User | Reusable templates, slash commands — `prompts/list`, `prompts/get` |
-| **Tasks** *(experimental)* | Protocol | Durable execution wrappers with TTL; state machine |
+| **Origin / date** | Anthropic, Nov 2024 | Google, Apr 2025 |
+| **Current stable** | Spec 2025-11-25 | v1.0.0 (Mar 12, 2026) |
+| **Governance** | Agentic AI Foundation (Linux Foundation), Dec 2025 | Linux Foundation, Jun 2025 |
+| **Integration direction** | Vertical: agent → tools/data | Horizontal: agent ↔ agent |
+| **Core abstraction** | Tools + Resources + Prompts | Tasks + Messages + Artifacts |
+| **Discovery** | `tools/list` JSON-RPC call | Agent Card at `/.well-known/agent-card.json` |
+| **Primary transport** | stdio (local) or HTTP+SSE (remote) | HTTP+JSON-RPC, gRPC, HTTP/REST |
+| **State model** | Stateful (connection-based) | Stateless by design (v1.0) |
+| **Supported modalities** | Text, structured data, APIs | Text, audio, video, UI negotiation |
+| **Agent opacity** | Servers expose tools explicitly | Remote agents opaque — internals hidden |
+| **Security verification** | OAuth/bearer tokens | Signed Agent Cards (cryptographic, v1.0) |
+| **Design precedent** | LSP | OpenAPI + web infrastructure standards |
 
-**Client-exposed primitives (servers invoke on the host):**
+---
 
-| Primitive | Description |
+## 2. Intended Use Cases
+
+### What MCP Solves
+
+MCP is the right choice when an AI model needs standardized access to external data, tools, or prompts. Per Google's own developer guidance, it's described as "the first step for any agent."
+
+Optimal scenarios:
+- Single-agent capability enhancement without bespoke connectors
+- Local/offline operation (stdio requires no network)
+- Standardized tool execution across multiple agents sharing the same interface
+- IDE assistants (Cursor, VS Code) — MCP is the drop-in tool layer
+- Long-running multi-step tasks with maintained context within a single session
+
+### What A2A Solves
+
+A2A is the right choice when tasks require coordination between autonomous agents from different vendors, frameworks, or servers. Per Google's developer guidance, A2A addresses where "knowledge lives with different remote agents" and "raw data might never be exposed by API but could be exposed via an agentic interface."
+
+Optimal scenarios:
+- Cross-vendor multi-agent workflows (Salesforce + SAP + ServiceNow without exposing internals)
+- Long-running distributed task lifecycle with INPUT_REQUIRED and AUTH_REQUIRED states — real-world human-in-the-loop patterns MCP does not natively handle
+- Multi-organization collaboration with cryptographically verifiable identities
+- Rich modality workflows: audio, video, UI negotiation between agents
+- Multi-tenancy: one endpoint hosting many agents at scale
+
+### The Gap Each Fills That the Other Doesn't
+
+**MCP's gap (vs A2A):** No peer coordination model. No native concept of routing a task to another agent, managing task lifecycle across systems, or handling auth handoffs between agents. MCP's stateful connection model also creates scaling concerns at hundreds of concurrent connections.
+
+**A2A's gap (vs MCP):** No tool execution model. A2A defines what agents can do and how they communicate, but delegates "how an agent connects to a database or executes a file operation" entirely to MCP (or equivalent).
+
+The consensus architectural pattern across multiple independent sources: A2A orchestrates between a HR agent, IT agent, and payroll agent; each individual agent uses MCP to access its own databases and tools.
+
+---
+
+## 3. Ecosystem and Adoption
+
+### MCP Adoption (Verified Numbers)
+
+All figures confirmed from primary sources (HIGH confidence per critic's review):
+
+- **97M monthly SDK downloads** (official Agentic AI Foundation announcement, December 2025)
+- **10,000 active MCP servers** (official MCP anniversary blog, November 25, 2025)
+- **~2,000 registry entries with 407% growth** since initial batch (official MCP anniversary blog)
+- **58 maintainers; 2,900+ Discord contributors; 100+ new contributors weekly** (official MCP blog)
+- **Client support confirmed in:** Claude, ChatGPT (March 2025), Gemini (April 2025), Microsoft Copilot, VS Code, Cursor
+- **Notable MCP servers:** Notion, Stripe, GitHub, Hugging Face, Postman, Amazon Bedrock
+
+**Governance:** MCP donated to the Agentic AI Foundation (AAIF) under the Linux Foundation, December 2025. Co-founded by Anthropic, OpenAI, and Block. Supporting members include AWS, Google, Microsoft, Cloudflare, and Bloomberg.
+
+**Timeline:**
+| Date | Milestone |
 |---|---|
-| **Sampling** | Server requests LLM completions from the host — model-agnostic, no API key required |
-| **Elicitation** | Server requests additional user input |
-| **Roots** | Server inquires about filesystem boundaries |
+| Nov 2024 | Anthropic open-sources MCP with Python/TypeScript SDKs |
+| Mar 2025 | OpenAI integrates across Agents SDK, Responses API, ChatGPT desktop |
+| Apr 2025 | Google DeepMind confirms MCP support in Gemini |
+| Sep 2025 | MCP Community Registry launched (~2,000 entries) |
+| Nov 2025 | Spec v2025-11-25; 17 SEPs completed; task-based workflows added |
+| Dec 2025 | Donated to AAIF/Linux Foundation |
 
-**MCP Tasks state machine (experimental, 2025-11-25):**
-```
-working → input_required → working  (loop)
-working → completed
-working → failed
-working → cancelled
-```
+**Security (flagged):** MCP has documented vulnerabilities — prompt injection (April 2025, Willison 2025), GitHub MCP private repo exfiltration (May 2025), CVE-2025-6514. eSentire (vendor) reported 43% of tested implementations vulnerable to prompt injection or tool poisoning — vendor-reported, not independently audited; treat as directionally valid.
 
-**Canonical message:**
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "method": "tools/call",
-  "params": {
-    "name": "get_weather",
-    "arguments": {"location": "New York"}
-  }
-}
-```
+**Excluded:** The "17,000+ servers" figure (Pento blog) is not confirmed. Official AAIF counts 10,000 active; current PulseMCP ~11,000. The 17,000 figure appears to combine multiple directories without deduplication.
 
-> **Evidence quality: STRONG** — Architecture sourced directly from modelcontextprotocol.io/specification/2025-11-25.
+### A2A Adoption (Verified Numbers)
 
----
+- **50+ technology partners at launch**, April 2025 (confirmed: official Google announcement). Named: Atlassian, Box, Cohere, Intuit, LangChain, MongoDB, PayPal, Salesforce, SAP, ServiceNow, Workday, and major consultancies (Accenture, BCG, Deloitte, PwC, McKinsey, KPMG, TCS, Wipro)
+- **150+ organizations supporting at v0.3**, July 31, 2025 (confirmed: official Google Cloud blog)
+- **GitHub: 23,100 stars, 2,300 forks, 10 releases** (confirmed: live GitHub data)
+- **SDKs:** Python, Go, JavaScript, Java, .NET/C#
+- **v1.0.0 released:** March 12, 2026 (confirmed: GitHub release tag)
 
-### 2.2 A2A Architecture
+**Technical Steering Committee (v1.0):** AWS, Cisco, Google, IBM Research, Microsoft, Salesforce, SAP, ServiceNow (confirmed: official A2A v1.0 announcement).
 
-A2A uses a **client-server model over HTTP** with three actors (A2A Spec v1.0.0, 2026):
+**Enterprise:** S&P Global and Tyson Foods named in Google's official v0.3 materials — **confirmed identity, unverified implementation specifics**.
 
-- **User:** End user or automated service defining goals
-- **A2A Client:** Application, service, or AI agent acting on behalf of the user
-- **A2A Server:** AI agent exposing HTTP endpoints
+**Adoption nuance:** A September 2025 independent developer analysis (fka.dev) documented that A2A suffered complexity barriers through mid-2025 — steep learning curves around discovery, capability negotiation, and security cards made it "practically inaccessible" to independent developers while MCP captured developer mindshare. This predates the v1.0 release in March 2026. Both narratives are accurate for their respective cohorts and time periods — developer adoption friction alongside enterprise partnership momentum — and are not contradictory.
 
-> ⚠️ **"Peer-to-peer" nuance:** A2A documentation consistently uses "peer-to-peer." The actual implementation is **client-initiated HTTP request/response**. An agent can be both client and server in different contexts, creating bidirectional deployment topologies — but the protocol is not symmetric. The P2P label describes design philosophy (autonomous collaborative agents), not the communication primitive. NAT traversal or symmetric connection behavior should not be assumed.
+### Governance Trajectory
 
-**Transport options:**
-1. Synchronous request/response + polling
-2. **SSE** — streaming real-time incremental results
-3. **Webhooks** — asynchronous push for disconnected scenarios
-4. **gRPC and REST** (added v0.2.2, June 2025)
+Both protocols now under Linux Foundation governance:
+- **A2A:** Linux Foundation, June 23, 2025
+- **MCP:** Agentic AI Foundation (AAIF), December 2025
 
-**Core primitives:**
-
-| Primitive | Description |
-|---|---|
-| **Agent Card** | JSON metadata at `/.well-known/agent-card.json` (RFC 8615): identity, endpoint, capabilities, auth requirements, skills. Signed since v0.3.0. |
-| **Task** | Stateful unit of work; persistent ID; can span hours to days |
-| **Message** | Communication turn with role ("user" or "agent") |
-| **Part** | Content container: text, binary, URL, structured JSON, audio, **video** |
-| **Artifact** | Tangible deliverable produced during task execution; composed of Parts |
-| **Context ID** | Groups related tasks across interactions — conversation-level scoping |
-
-**A2A v1.0.0 notable changes (March 12, 2026):**
-- OAuth 2.0 modernized: removed implicit flow + password grant; added device code flow + PKCE
-- `tasks/list` with pagination
-- Multi-tenancy via `scope` field on gRPC
-- Protocol separated from transport mapping
-
-> **Evidence quality: STRONG** for architecture (sourced from github.com/a2aproject/A2A). Note the repo moved from `google/A2A` → `a2aproject/A2A` post–Linux Foundation transfer.
+The A2A TSC includes direct competitors (AWS, Google, Microsoft). How conflicts between TSC members get resolved in practice is not yet established. Neither governance structure's conflict-resolution mechanisms have been publicly stress-tested.
 
 ---
 
-## 3. Architectural Comparison
+## 4. Complementary or Competing?
 
-| Dimension | MCP (2025-11-25) | A2A (v1.0.0) |
+### Technical Argument for Complementarity
+
+Google's own developer guidance explicitly frames them as complementary: *"MCP standardizes model-tool interactions, while A2A enables agents to coordinate tasks and communicate across systems."*
+
+The vertical/horizontal framing — consistent across multiple independent technical sources — is the most precise description:
+- **MCP** = vertical integration (agents connecting *downward* to the tool layer)
+- **A2A** = horizontal integration (*lateral* collaboration between peer agents)
+
+These requirements exceed each other's design scope by construction:
+- Agent-tool interactions (MCP): explicit input schemas, fixed return formats, atomic operations
+- Agent-to-agent communication (A2A): task allocation negotiation, progress synchronization, long-running async task handling, intermediate result streaming
+
+### Where They Overlap (Real Friction Points)
+
+1. **Tool vs. agent boundary ambiguity.** Whether a capability (e.g., a search service, code execution environment) is deployed as an MCP tool or an A2A agent is a design decision with compounding consequences. No canonical guidance currently defines where this boundary should be.
+
+2. **Developer mindshare competition.** MCP arrived first (November 2024 vs. April 2025). For the middle tier of workflows — multi-step tasks that could be a single sophisticated MCP-connected agent *or* an A2A multi-agent pipeline — the path of least resistance leads developers to extend MCP. The September 2025 fka.dev analysis documented this dynamic concretely.
+
+3. **Discovery mechanisms are incompatible.** MCP (`tools/list`) and A2A (`/.well-known/agent-card.json`) require separate infrastructure. No unified service registry spans both protocols as of this writing.
+
+4. **Shared transport substrate.** Both use JSON-RPC 2.0 over HTTP. The current separation is in semantics, not transport primitives — future convergence or divergence is architecturally possible.
+
+### Google's Own Guidance
+
+Google recommends sequential adoption: *"Most agents start with MCP for data access. As your requirements grow (multi-agent communication, rich UI, streaming), bring in the protocol that solves that specific problem."*
+
+Google's developer guide articulates a six-protocol stack (MCP → A2A → UCP → AP2 → A2UI → AG-UI). **Important caveat:** UCP, AP2, A2UI, and AG-UI are not established standards at MCP/A2A maturity levels — they represent Google's aspirational framing, not confirmed industry consensus. Treat the first two layers as actionable; the remaining four as directional.
+
+---
+
+## 5. Where Experts Disagree
+
+| Claim | Position A | Position B | Evidence Strength |
+|---|---|---|---|
+| Complementary or competing? | Complementary different layers (Google, Koyeb, TrueFoundry) | Competing for mindshare in the middle tier — MCP captured developers first (fka.dev; critic synthesis) | MEDIUM — technical complementarity is well-established; mindshare competition is real but based on qualitative developer sentiment, not survey data |
+| Is MCP single-agent only? | Yes — "limiting multi-agent coordination" (TrueFoundry) | No — MCP supports multi-agent setups but lacks *native* peer coordination primitives | MEDIUM — TrueFoundry framing is a simplification; nuanced version is more accurate |
+| Is A2A stalled or growing? | Stalled: complexity barriers made it "practically inaccessible" to indie devs by Sep 2025 (fka.dev) | Growing: 150+ org partnerships, enterprise TSC momentum, v1.0 Mar 2026 (official sources) | HIGH — both correct for different cohorts at different times; not contradictory |
+| Active MCP server count? | 17,000+ (Pento blog) | 10,000 active (official AAIF, Dec 2025); ~11,000 current PulseMCP | HIGH — 10,000–11,000 is defensible; 17,000 is not confirmed |
+
+---
+
+## 6. Gaps and Limitations
+
+**Gap 1 — No performance benchmarks.** Zero data on transport latency (stdio vs HTTP+SSE vs A2A), throughput under load, or connection establishment cost. Deployment-critical metrics absent from all sources.
+
+**Gap 2 — No developer experience data.** No survey data, GitHub issue analysis, or Stack Overflow volume comparing implementation difficulty. fka.dev is the only qualitative data point.
+
+**Gap 3 — MCP scaling limits underanalyzed.** Coverage is thin on MCP's architectural ceiling: lack of built-in agent-routing, stateful connection model at hundreds of concurrent connections, host management overhead.
+
+**Gap 4 — Competing protocols absent.** Microsoft Semantic Kernel, AutoGen, and OpenAI Assistants API — all directly relevant — are entirely unaddressed in the available literature.
+
+**Gap 5 — Governance implications unanalyzed.** What Linux Foundation transfer means in practice for spec roadmap control, TSC conflict resolution between Google/Microsoft/AWS, and AAIF vs A2A TSC model differences — reported as fact, not analyzed.
+
+**Gap 6 — No production case studies with measured outcomes.** The HR onboarding example is hypothetical. S&P Global and Tyson Foods lack implementation specifics or metrics. No "we deployed MCP + A2A in production, here is what we measured" case study exists.
+
+**Gap 7 — A2A SDK maturity unquantified.** MCP has 97M+ monthly downloads. A2A SDK download numbers are not published. SDK documentation quality, error handling, debugging tooling, and community examples are untouched.
+
+---
+
+## 7. Verification Summary
+
+| Claim | Status | Confidence |
 |---|---|---|
-| **Topology** | Hub-and-spoke (host → clients → servers) | Client-server; agents can be both |
-| **Transport** | stdio (local) + Streamable HTTP (remote) | HTTP/SSE/webhooks/gRPC |
-| **Local support** | ✅ stdio | ❌ HTTP-only |
-| **Base protocol** | JSON-RPC 2.0 | JSON-RPC 2.0 |
-| **Discovery** | Host must know URL in advance; Registry in preview | Agent Card at RFC 8615 well-known URI |
-| **Auth** | OAuth 2.1 (optional) | OAuth 2.0 + PKCE + mTLS (declared in Agent Card) |
-| **Long-running tasks** | Experimental (2025-11-25) | Core primitive from v0.1 |
-| **Capability exposure** | Full — `tools/list`, `resources/list` expose everything | Partial — Agent Card exposes skills; internals hidden |
-| **Agent opacity** | Servers are transparent | Agents are black boxes |
-| **Multimodal** | Text, image, audio, resource_link | Text, binary, structured JSON, audio, **video** |
-| **Multi-tenancy** | Not in spec | v1.0.0 — `scope` field on gRPC |
-
----
-
-## 4. Problems Each Solves That the Other Does Not
-
-### Problems MCP Solves That A2A Does Not
-
-**1. Universal tool/resource interface for LLMs.**
-Pre-MCP, every AI application required bespoke integrations per data source. MCP provides a universal protocol layer with typed tool definitions, input/output schemas, and structured returns that LLMs can reliably invoke. *(The "USB-C for AI" metaphor, used officially by Anthropic, overstates plug-and-play ease — USB-C guarantees physical interoperability; MCP still requires server-side implementation work.)*
-
-**2. LLM Sampling without API keys.**
-`sampling/createMessage` allows an MCP server to request completions from the connected host's LLM, remaining model-agnostic without importing any LLM SDK. A2A agents are assumed to manage their own LLMs — no equivalent mechanism exists.
-
-**3. Prompt templating as a first-class primitive.**
-MCP's `Prompts` primitive enables reusable interaction templates — slash commands, few-shot examples, system prompt patterns — surfaced as user-controlled UI options. No A2A equivalent exists.
-
-**4. Structured tool output schema validation.**
-Tools can declare `outputSchema` (JSON Schema), enabling strict validation of structured results. A2A has no per-skill output schema mechanism.
-
-**5. Interactive UI embedding (MCP Apps extension).**
-MCP Apps allow servers to return interactive HTML interfaces (data visualizations, forms, dashboards) that render inside host applications. No A2A equivalent.
-
-**6. Local process integration via stdio.**
-Zero network overhead for developer tooling (VS Code, Cursor, local scripts). A2A is HTTP-only.
-
-**7. Real-time resource subscriptions.**
-`resources/subscribe` + push notifications when content changes — enables real-time document/file/database monitoring. Not in A2A.
-
-**8. Filesystem root exposure (Roots primitive).**
-Servers can understand the operational scope of the host filesystem. No A2A equivalent.
-
----
-
-### Problems A2A Solves That MCP Does Not
-
-**1. Cross-vendor, cross-framework agent interoperability.**
-A2A enables LangGraph, CrewAI, Semantic Kernel, and proprietary agents to collaborate without shared implementation, shared tool definitions, or shared framework dependencies. MCP has no agent-to-agent communication layer.
-
-**2. Agent opacity for IP protection.**
-A2A agents remain opaque about internal memory, tool lists, and reasoning chains. Nuance: *external interface* is still exposed via Agent Card (name, description, skills, auth). Opacity applies to *internal implementation* only. MCP servers expose everything via `tools/list`, `resources/list`.
-
-**3. Autonomous agent capability discovery.**
-Agent Cards at RFC 8615 URIs (`/.well-known/agent-card.json`) enable automated discovery without prior configuration. MCP Registry (in preview) partially addresses this at the ecosystem level but is not integrated into the core protocol.
-
-**4. Long-running task management as a core primitive.**
-Hours-to-days tasks with persistent IDs, polling, webhook callbacks, and structured artifact delivery have been core A2A primitives since v0.1 (April 2025). MCP added experimental Tasks in November 2025. *(See Section 5 for the functional overlap this creates.)*
-
-**5. Disconnected/async operations via webhooks.**
-A2A supports webhook-based push notifications — client initiates, disconnects, receives results later. MCP experimental Tasks require polling.
-
-**6. Multi-tenancy.**
-A2A v1.0.0 explicitly added multi-tenancy via gRPC `scope` field. MCP has no equivalent.
-
-**7. Video and extended multimodal content.**
-A2A `Part` supports video via `mediaType` negotiation. MCP supports text, image, audio, resource_link — not video.
-
-**8. Conversation-level context threading (Context ID).**
-A2A's `contextId` groups related tasks across multiple interactions — equivalent to a project or conversation thread. No direct MCP equivalent.
-
----
-
-## 5. Where the Landscape Is More Complex
-
-### 5.1 MCP Tasks vs. A2A Tasks: The Overlap Is Significant
-
-The official "complementary" framing — authored by the A2A team in `a2a-and-mcp.md` — materially understates functional overlap. Both protocols now have:
-- TTL-based stateful task primitives
-- State machines with `working`, `completed`, `failed`, `cancelled`
-- Polling-based or notification-based status tracking
-- Cancellation support
-
-The architectural distinction (MCP tasks wrap tool invocations; A2A tasks represent full agent collaborations) is real but does not eliminate a genuine design decision point. Third-party analyses (Towards AI, Medium technical writeups) explicitly label this the **"Protocol Wars" dynamic** — a framing the official documentation suppresses.
-
-**Task state comparison:**
-
-| State | MCP (experimental) | A2A (core) |
-|---|---|---|
-| Submitted | *(implicit via request)* | `submitted` |
-| Working | `working` | `working` |
-| Input needed | `input_required` | *(handled via message turns)* |
-| Completed | `completed` | `completed` |
-| Failed | `failed` | `failed` |
-| Cancelled | `cancelled` | `cancelled` |
-
-### 5.2 Genuine Decision Point: "Invoke a Specialized AI Service"
-
-When an orchestrator needs to invoke a specialized ML service (e.g., document classification):
-
-**MCP path:** Expose the service as an MCP tool with input/output schemas. Stateless, structured, the orchestrator retains LLM reasoning control.
-
-**A2A path:** The service runs as an A2A agent. Orchestrator delegates a task; the service responds autonomously. Stateful, multi-turn capable, the service retains its own reasoning control.
-
-This is a **genuine competitive decision point**. Protocol selection has downstream implications for opacity, schema enforcement, multi-turn capability, versioning, and vendor dependency.
-
-### 5.3 Microsoft's Role Is Underrepresented in Most Analyses
-
-Microsoft is a platinum AAIF member and its role is architecturally substantive:
-- **Semantic Kernel** — native support for both MCP and A2A
-- **Azure AI Foundry** — uses A2A for agent collaboration
-- **Microsoft Agent Framework** (announced October 2025; merger of AutoGen + Semantic Kernel) — natively supports both protocols
-- A2A **Technical Steering Committee** participant
-
-Practical implication: any enterprise deploying on Azure has a direct path to both protocols within a single managed stack.
-
-### 5.4 OpenAI's AGENTS.md and the Three-Way Dynamic
-
-Most analyses frame this as a two-protocol landscape. The fuller picture includes OpenAI's **AGENTS.md** specification (launched August 2025, **60,000+ adopters** per critic assessment — *evidence quality: MODERATE, primary source not retrieved*). OpenAI is an AAIF co-founder alongside Anthropic and Google.
-
-| Actor | Protocol Origin | AAIF Role |
-|---|---|---|
-| Anthropic | MCP | Platinum member |
-| Google | A2A | Platinum member |
-| OpenAI | AGENTS.md | Co-founder |
-| Microsoft | — | Platinum member, TSC participant |
-
-The AAIF governance roof creates incentives for protocol convergence or interoperability. Whether this achieves harmonization across MCP, A2A, and AGENTS.md — or produces governance fragmentation within the shared umbrella — is an open empirical question as of April 2026.
-
-### 5.5 IBM ACP Merger Affects A2A's Design Scope
-
-IBM's Agent Communication Protocol (ACP, March 2025) was an independent protocol with REST-first design philosophy — simpler and more developer-accessible than A2A's original architecture. Its merger into A2A (August–September 2025) means A2A v1.0.0 incorporates both Google's enterprise-oriented architecture (Agent Cards, SSE, complex auth) and IBM's accessibility-focused design. The "A2A is Google's protocol" description is accurate for April 2025 origin only.
-
----
-
-## 6. Complementary or Competing?
-
-The canonical combined architecture — endorsed by both protocols' official documentation — is well-established:
-
-```
-┌─────────────────────────────────────────────────┐
-│  Multi-Agent Workflow (A2A coordination layer)  │
-│   Orchestrator Agent ←──A2A──→ Specialist Agent │
-└──────────────┬──────────────────────┬───────────┘
-               │ MCP                  │ MCP
-    ┌──────────▼──────┐    ┌──────────▼──────┐
-    │  Tool Server 1  │    │  Tool Server 2  │
-    │  (DB, Files,    │    │  (APIs, Search, │
-    │   Git, etc.)    │    │   Compute, etc.)│
-    └─────────────────┘    └─────────────────┘
-```
-
-**Known combined implementations:**
-- **Cisco agntcy** — leverages both protocols for discovery and observability (per A2A documentation)
-- **LangChain** — A2A launch partner and major MCP consumer for tool-equipped agents
-- **Microsoft Agent Framework (AutoGen + Semantic Kernel)** — native support for both in a single orchestration framework
-- **Google Vertex AI Agent Builder** — A2A for agent coordination, MCP for tool access in GCP deployments
-
-**The complementary framing holds** for clean layer separation: MCP for tool invocation, A2A for agent coordination. These are not in conflict when used at their intended layers.
-
-**Genuine competition exists** in three cases: (1) wrapping a specialized AI service as MCP tool vs. A2A agent, (2) async AI service invocation where MCP Tasks and A2A Tasks now overlap functionally, (3) selecting a protocol for a new long-running AI workflow where both are technically capable.
-
----
-
-## 7. Adoption
-
-### MCP (as of early 2026)
-- **10,000+ active servers; 97M monthly SDK downloads** (AAIF-reported, February 2026 — *MODERATE: credible but primary source not directly retrieved*)
-- **Supported clients (confirmed):** Claude, ChatGPT, VS Code Copilot, Cursor, Zed, Replit, Codeium, Sourcegraph, Goose, Postman, MCPJam
-- **SDKs:** TypeScript (official), Python (official), community SDKs
-- **Registry:** In preview; backed by Anthropic, GitHub, PulseMCP, Microsoft
-
-### A2A (as of early 2026)
-- **50+ named launch partners** (April 9, 2025 — *STRONG*); **100+ supporting organizations** (June 23, 2025 — *MODERATE*)
-- **Named partners:** Atlassian, Box, Cohere, LangChain, MongoDB, PayPal, Salesforce, SAP, ServiceNow, Workday; services firms: Accenture, BCG, Capgemini, Cognizant, Deloitte, HCLTech, Infosys, KPMG, McKinsey, PwC, TCS, Wipro
-- **GitHub** (snapshot, order-of-magnitude only): ~23k stars, 2.3k forks — repo URL has moved to `a2aproject/A2A`
-- **SDKs:** Python, Go, JavaScript, Java, .NET
-- ⚠️ **No Technology Compatibility Kit (TCK)** exists for v1.0.0 — "A2A compliant" is not formally verifiable
-
----
-
-## 8. Gaps and Limitations
-
-1. **No MCP spec post 2025-11-25 confirmed.** MCP Tasks (experimental in that spec) may have graduated to stable by April 2026. Verify at modelcontextprotocol.io.
-
-2. **No A2A TCK.** Without a Technology Compatibility Kit, "A2A compliant" claims are unverifiable. Procurement/audit decisions requiring formal compliance should note this gap.
-
-3. **Agent Card trust model underspecified.** A2A v0.3.0 added card signatures; the trust model for autonomous agent discovery via well-known URIs is not fully elaborated in retrieved documentation.
-
-4. **AAIF metrics unverified at primary source.** The 10,000+/97M figures are credible but should not be used as precise citations without direct AAIF documentation.
-
-5. **UCP and other protocols not covered.** Universal Commerce Protocol (UCP) and other candidates are identified in comparative analyses but not investigated here.
-
-6. **Streamable HTTP changelog ambiguity.** May have been introduced in 2025-03-26 spec rather than 2025-11-25. Verify before relying on transport history for compliance or migration.
+| A2A v1.0.0 released March 12, 2026 | CONFIRMED (GitHub releases) | HIGH |
+| MCP donated to AAIF/Linux Foundation Dec 2025 | CONFIRMED (official blog + LF press release) | HIGH |
+| A2A moved to Linux Foundation June 23, 2025 | CONFIRMED (LF press release) | HIGH |
+| A2A GitHub: 23,100 stars, 2,300 forks | CONFIRMED (GitHub live) | HIGH |
+| 97M monthly MCP SDK downloads | CONFIRMED (official AAIF announcement) | HIGH |
+| 10,000 active MCP servers | CONFIRMED (official MCP blog) | HIGH |
+| 150+ organizations supporting A2A at v0.3 | CONFIRMED (Google Cloud blog) | HIGH |
+| A2A TSC members listed | CONFIRMED (official A2A announcement) | HIGH |
+| MCP AAIF co-founders: Anthropic, OpenAI, Block | CONFIRMED (LF press release) | HIGH |
+| S&P Global, Tyson Foods as A2A adopters | PARTIALLY CONFIRMED — identity confirmed, specifics unverified | MEDIUM |
+| 17,000+ MCP servers in directories | NOT CONFIRMED (likely directory overcount) | LOW — excluded |
+| $1.8B MCP market size 2025 | NOT CONFIRMED — no credible source found | LOW/LIKELY CONFABULATION — excluded |
+| MCP security: 43% vulnerable, 437K environments | VENDOR-REPORTED (eSentire), not independently audited | MEDIUM — flagged |
 
 ---
 
 ## References
 
-**Primary Spec Documentation:**
-
-- Anthropic / AAIF. (2025). *Model Context Protocol Specification, v2025-11-25*. https://modelcontextprotocol.io/specification/2025-11-25/ *(Architecture, lifecycle, transports, authorization, tools, resources, tasks, sampling, sampling)*
-
-- A2A Project / Linux Foundation / AAIF. (2026). *A2A Protocol v1.0.0*. https://github.com/a2aproject/A2A *(Key concepts, a2a-and-mcp.md, agent-discovery.md, CHANGELOG, roadmap)*
-
-**Announcements:**
-
-- Anthropic. (2024, November 25). *Introducing the Model Context Protocol*. https://www.anthropic.com/news/model-context-protocol
-
-- Google Developers. (2025, April 9). *A2A: A New Era of Agent Interoperability*. https://developers.googleblog.com/en/a2a-a-new-era-of-agent-interoperability/
-
-**Standards Referenced:**
-- IETF RFC 8615 — Well-Known Uniform Resource Identifiers *(A2A Agent Card discovery)*
-- IETF RFC 8707 — Resource Indicators for OAuth 2.0 *(MCP authorization)*
-- IETF RFC 9728 — OAuth 2.0 Protected Resource Metadata *(MCP authorization)*
-- JSON-RPC 2.0 specification *(base protocol layer for both)*
-
-> *Third-party community site a2aprotocol.ai — **evidence quality: MODERATE** — useful for analogies but not authoritative for spec claims.*
+1. Anthropic. (2024–2025). *Model Context Protocol — Introduction*. https://modelcontextprotocol.io/introduction
+2. Anthropic/MCP Team. (Nov 25, 2025). *One Year of MCP: November 2025 Spec Release*. https://blog.modelcontextprotocol.io/posts/2025-11-25-first-mcp-anniversary/
+3. Google. (Apr 9, 2025). *Announcing the Agent2Agent Protocol (A2A)*. https://developers.googleblog.com/en/a2a-a-new-era-of-agent-interoperability/
+4. A2A Protocol Project. (2025–2026). *A2A Protocol Specification v1.0.0*. https://a2a-protocol.org/latest/specification/
+5. A2A Protocol Project. (Mar 2026). *Announcing Version 1.0*. https://a2a-protocol.org/latest/announcing-1.0/
+6. A2A Protocol Project. *GitHub Repository: a2aproject/A2A*. https://github.com/a2aproject/A2A
+7. Google. (2025). *Developer's Guide to AI Agent Protocols*. https://developers.googleblog.com/developers-guide-to-ai-agent-protocols/
+8. Linux Foundation. (Jun 23, 2025). *Linux Foundation Launches the Agent2Agent Protocol Project*. https://www.linuxfoundation.org/press/linux-foundation-launches-the-agent2agent-protocol-project-to-enable-secure-intelligent-communication-between-ai-agents
+9. Google Cloud. (Jul 31, 2025). *Agent2Agent Protocol Is Getting an Upgrade*. https://cloud.google.com/blog/products/ai-machine-learning/agent2agent-protocol-is-getting-an-upgrade
+10. Snyder, A. (Dec 2024). *Anthropic Publishes Model Context Protocol Specification*. InfoQ. https://www.infoq.com/news/2024/12/anthropic-model-context-protocol/
+11. Willison, S. (Apr 9, 2025). *MCP Prompt Injection*. https://simonwillison.net/2025/Apr/9/mcp-prompt-injection/
+12. Jeong, C. (Jun 2025). *A Study on the MCP x A2A Framework…* arXiv preprint arXiv:2506.01804. **[PREPRINT — peer-review status unverified]** https://arxiv.org/abs/2506.01804
+13. fka.dev. (Sep 11, 2025). *What Happened to Google's A2A?* [Independent developer blog; pre-v1.0 snapshot] https://blog.fka.dev/blog/2025-09-11-what-happened-to-googles-a2a/
+14. eSentire. (2025). *MCP Security: Critical Vulnerabilities Every CISO Should Address*. [Vendor-reported figures] https://www.esentire.com/blog/model-context-protocol-security-critical-vulnerabilities-every-ciso-should-address-in-2025
+15. Koyeb. (2025). *A2A and MCP: Start of the AI Agent Protocol Wars?* https://www.koyeb.com/blog/a2a-and-mcp-start-of-the-ai-agent-protocol-wars
+16. GetStream. (2025). *LLM Context Protocols: Agent2Agent vs. MCP*. https://getstream.io/blog/agent2agent-vs-mcp/
+17. Descope. (2025). *MCP vs A2A*. https://www.descope.com/blog/post/mcp-vs-a2a
 
 ---
 
-**Three files saved:**
-- `/tmp/searcher_output.md` — raw findings from 72 tool calls across MCP spec, A2A spec, announcements, and third-party analyses
-- `/tmp/critic_output.md` — evidence quality ratings, conflict analysis, gap identification (including AAIF timeline correction and ACP merger gap)
-- `/tmp/final_report.md` — the full report above
+**Saved to:** `/Users/rshah/research-agent-workshop/final_report.md`
+
+**Research methodology:** Searcher (30 sources, 3 search rounds) → Critic (spot-verified 12 key claims, flagged 3 exclusions and 3 caveats) → Synthesizer (excluded 2 claims, applied 5 flags, built verified reference list).
