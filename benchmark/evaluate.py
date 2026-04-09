@@ -151,15 +151,22 @@ def heuristic_score(report: str, question: str = "") -> dict:
         r"future|open problem|remain|promising|emerging|potential|outlook",
         report, re.IGNORECASE
     ))
-    # Evidence rigor markers (differentiate steps 5-6 from earlier steps)
-    evidence_quality = len(re.findall(
-        r"\bevidence quality\b|\bSTRONG\b|\bMODERATE\b|\bWEAK\b",
-        report,
+    # Evidence rigor markers (differentiate steps 5-6 from earlier steps).
+    # These require a structured Verification Summary section with itemised
+    # results — bare keywords in isolation don't count.
+    has_verification_section = bool(re.search(
+        r"^##\s*(Verification|Citation Verification|Source Verification)",
+        report, re.MULTILINE | re.IGNORECASE,
     ))
+    verification_entries = len(re.findall(
+        r"^\s*[-*]\s+.+(?:VERIFIED|UNVERIFIED|HALLUCINATED|Cannot Verify)",
+        report, re.MULTILINE | re.IGNORECASE,
+    )) if has_verification_section else 0
+    evidence_quality = verification_entries  # renamed for downstream compat
     verification_markers = len(re.findall(
         r"\bverified\b|\bunverified\b|\bhallucinated\b|\bcorrection",
         report, re.IGNORECASE,
-    ))
+    )) if has_verification_section else 0
     insight_score = min(10, (
         min(analysis_phrases // 2, 4)
         + min(conflict_phrases, 3)
@@ -256,19 +263,16 @@ def heuristic_score(report: str, question: str = "") -> dict:
     # scores are scaled to reflect this fundamental limitation.
     # This creates the staircase: steps 0-2 (no tools) score lower than
     # steps 3-4 (tools) which score lower than steps 5-6 (verification/team).
-    if urls < 5 and evidence_quality < 3:
-        # No real external sources, no evidence quality: training data only
+    if has_verification_section and verification_entries >= 3:
+        # Structured verification section with ≥3 itemised results (steps 5-6)
+        factor = 1.0 + min(verification_entries / 100, 0.05)
+    elif urls >= 10:
+        # Real external sources, no verification (steps 3-4)
+        factor = 0.70 + min(urls / 200, 0.10)
+    elif urls < 5:
+        # No real external sources: training data only (steps 0-2)
         factor = 0.35 + min(attributed_claims / 20, 0.15)
         factor += min(scores["insight"]["score"] / 100, 0.05)
-    elif evidence_quality >= 3:
-        # Evidence quality ratings present (team/critic output)
-        factor = 1.0 + min(evidence_quality / 100, 0.05)
-    elif verification_markers >= 3 and urls >= 10:
-        # Verification with external sources
-        factor = 1.0
-    elif urls >= 10:
-        # External sources, no verification
-        factor = 0.70 + min(urls / 200, 0.10)
     else:
         factor = 0.55
 

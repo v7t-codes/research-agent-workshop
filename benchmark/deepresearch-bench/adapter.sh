@@ -62,6 +62,7 @@ mkdir -p "$OUTPUT_DIR"
 OUTPUT_FILE="$OUTPUT_DIR/${OUTPUT_NAME}.jsonl"
 
 command -v claude &>/dev/null || { echo "Error: claude CLI not found" >&2; exit 1; }
+[[ -z "${ANTHROPIC_API_KEY:-}" ]] && { echo "Error: ANTHROPIC_API_KEY is not set" >&2; exit 1; }
 
 # ── Build system prompt for the chosen step ──────────────────────────
 build_system_prompt() {
