@@ -3,14 +3,27 @@
 __pycache__/
 *.pyc
 
-# Agent working files (written during runs)
+# Presenter tools — never committed, never shared
+presenter/
+
+# Scorer — presenter keeps this locally, students don't get it
+benchmark/evaluate.py
+benchmark/run_leaderboard.sh
+benchmark/judge.py
+benchmark/verify_staircase.py
+
+# Generated agent working files
 research_draft.md
 searcher_output.md
 critic_output.md
 final_report.md
-# Generated outputs — not committed
+
+# Demo live outputs (generated per run)
 demo/*/output.md
 demo/*/searcher_output.md
 demo/*/critic_output.md
 demo/*/final_report.md
 demo/*/research_draft.md
+
+# Student submission outputs (generated when leaderboard runs)
+students/*/scores/

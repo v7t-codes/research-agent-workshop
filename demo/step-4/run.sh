@@ -29,6 +29,6 @@ $(cat SKILL.md)" \
 
 echo ""
 echo "━━━ SCORE (heuristic) ━━━"
-python3 "$REPO/benchmark/evaluate.py" --input output.md --quick --question "$Q"
+SCORER="$REPO/presenter/evaluate.py"; [ -f "$SCORER" ] && python3 "$SCORER" --input output.md --quick --question "$Q"
 echo ""
 echo "Note: if heuristic dips below step 3, run without --quick for accurate LLM score."
