@@ -8,3 +8,9 @@ research_draft.md
 searcher_output.md
 critic_output.md
 final_report.md
+# Generated outputs — not committed
+demo/*/output.md
+demo/*/searcher_output.md
+demo/*/critic_output.md
+demo/*/final_report.md
+demo/*/research_draft.md
