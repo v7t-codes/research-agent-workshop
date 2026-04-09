@@ -291,10 +291,16 @@ def build_command(step: int) -> list[str]:
 
     cmd = ["claude", "-p", "--model", "sonnet",
            "--output-format", "stream-json", "--verbose",
-           "--dangerously-skip-permissions"]
+           "--dangerously-skip-permissions",
+           "--no-session-persistence"]
 
     if auth_mode == "apikey":
+        # --bare skips CLAUDE.md auto-discovery, hooks, plugins — clean isolated run
         cmd.append("--bare")
+    else:
+        # OAuth mode: disable CLAUDE.md auto-discovery so Claude doesn't read
+        # the repo's reference reports and other files as context
+        cmd.extend(["--add-dir", str(step_dir)])
 
     claude_md = (step_dir / "CLAUDE.md").read_text()
     system_prompt = claude_md
@@ -727,6 +733,32 @@ def run_step(step: int) -> tuple[str, float]:
     console.print(Rule("[bold]Scoring[/bold]", style="bright_white"))
     console.print()
     score = score_output(output_path, step, color)
+
+    # ── Reference score comparison ──
+    # Show the pre-computed "expected" score from test-run/scores/ so the
+    # presenter can contextualize: "in a clean environment this scores X"
+    ref_score_file = REPO / "test-run" / "scores" / f"step-{step}.txt"
+    if ref_score_file.exists():
+        ref_score = None
+        for sline in ref_score_file.read_text().splitlines():
+            if "TOTAL SCORE" in sline:
+                m = re.search(r"([\d.]+)/100", sline)
+                if m:
+                    ref_score = float(m.group(1))
+        if ref_score is not None:
+            console.print(Panel(
+                f"[bold]Live score:[/bold]      {score or '?'}/100\n"
+                f"[bold]Reference score:[/bold]  {ref_score}/100  [dim](pre-computed, clean environment)[/dim]\n\n"
+                f"[dim]Reference scores represent the expected staircase: "
+                f"20 → 21 → 37 → 58 → 53 → 90 → 93. "
+                f"Live scores vary with model randomness, tool availability, "
+                f"and network conditions. The TREND matters more than exact numbers.[/dim]",
+                title="[bold]📈 Score Comparison[/bold]",
+                border_style="bright_white",
+                width=min(console.width, 110),
+                padding=(1, 2),
+            ))
+            console.print()
 
     # ── Summary stats ──
     console.print(Panel(
