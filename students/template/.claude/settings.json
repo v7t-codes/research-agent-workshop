@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "my-tools": {
+      "command": "python3",
+      "args": ["mcp_server.py"]
+    }
+  }
+}

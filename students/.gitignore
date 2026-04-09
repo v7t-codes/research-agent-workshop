@@ -1,0 +1,4 @@
+# Don't commit individual score outputs — only the summary
+*/scores/*-output.md
+# Don't commit temp MCP files
+*.mcp-config.json
