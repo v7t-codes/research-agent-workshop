@@ -8,8 +8,7 @@
 # They communicate through FILES — not shared memory.
 
 set -euo pipefail
-REPO="$(cd "$(dirname "$0")/../.." && pwd)"
-Q="$(cat "$REPO/demo/QUESTION.txt")"
+source "$(cd "$(dirname "$0")/.." && pwd)/common.sh"
 
 echo "━━━ STEP 6: Team of Agents ━━━"
 echo "Files in this folder:"
@@ -22,7 +21,7 @@ echo "SKILL-synthesizer.md   = writes final report (own context window)"
 echo ""
 echo "Running... (watch three agents spawn in sequence)"
 
-echo "$Q" | claude -p --bare --model sonnet \
+echo "$Q" | claude $CLAUDE_FLAGS \
   --system-prompt "$(cat CLAUDE.md)
 
 ---
@@ -42,9 +41,6 @@ SYNTHESIZER AGENT SKILL (dispatch as subagent):
 $(cat SKILL-synthesizer.md)" \
   --allowed-tools "WebSearch,WebFetch,Read,Write,Agent,mcp__research-tools__search_arxiv,mcp__research-tools__search_semantic_scholar" \
   --mcp-config mcp.json \
-  --dangerously-skip-permissions \
   | tee output.md
 
-echo ""
-echo "━━━ SCORE ━━━"
-SCORER="$REPO/presenter/evaluate.py"; [ -f "$SCORER" ] && python3 "$SCORER" --input output.md --quick --question "$Q"
+score_output output.md "$Q"

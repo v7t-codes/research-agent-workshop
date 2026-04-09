@@ -4,8 +4,7 @@
 # What doesn't change: no methodology, no tools, still from training data only.
 
 set -euo pipefail
-REPO="$(cd "$(dirname "$0")/../.." && pwd)"
-Q="$(cat "$REPO/demo/QUESTION.txt")"
+source "$(cd "$(dirname "$0")/.." && pwd)/common.sh"
 
 echo "━━━ STEP 1: Context (CLAUDE.md) ━━━"
 echo "Files in this folder:"
@@ -13,12 +12,9 @@ ls "$(dirname "$0")"
 echo ""
 echo "Running..."
 
-echo "$Q" | claude -p --bare --model sonnet \
+echo "$Q" | claude $CLAUDE_FLAGS \
   --system-prompt "$(cat CLAUDE.md)" \
   --disallowed-tools "WebSearch,WebFetch,Agent" \
-  --dangerously-skip-permissions \
   | tee output.md
 
-echo ""
-echo "━━━ SCORE ━━━"
-SCORER="$REPO/presenter/evaluate.py"; [ -f "$SCORER" ] && python3 "$SCORER" --input output.md --quick --question "$Q"
+score_output output.md "$Q"

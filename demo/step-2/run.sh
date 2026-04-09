@@ -4,8 +4,7 @@
 # What doesn't change: still no real-time sources, still from training data.
 
 set -euo pipefail
-REPO="$(cd "$(dirname "$0")/../.." && pwd)"
-Q="$(cat "$REPO/demo/QUESTION.txt")"
+source "$(cd "$(dirname "$0")/.." && pwd)/common.sh"
 
 echo "━━━ STEP 2: Skill (SKILL.md) ━━━"
 echo "Files in this folder:"
@@ -13,16 +12,13 @@ ls "$(dirname "$0")"
 echo ""
 echo "Running..."
 
-echo "$Q" | claude -p --bare --model sonnet \
+echo "$Q" | claude $CLAUDE_FLAGS \
   --system-prompt "$(cat CLAUDE.md)
 
 ---
 SKILL INSTRUCTIONS (follow this methodology):
 $(cat SKILL.md)" \
   --disallowed-tools "WebSearch,WebFetch,Agent" \
-  --dangerously-skip-permissions \
   | tee output.md
 
-echo ""
-echo "━━━ SCORE ━━━"
-SCORER="$REPO/presenter/evaluate.py"; [ -f "$SCORER" ] && python3 "$SCORER" --input output.md --quick --question "$Q"
+score_output output.md "$Q"

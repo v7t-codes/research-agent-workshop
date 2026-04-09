@@ -5,6 +5,8 @@
 # PRESENTERS: You need ANTHROPIC_API_KEY (for demo commands + final scoring)
 # STUDENTS:   You need a claude.ai account (run `claude auth login`)
 
+REPO_ROOT="$(cd "$(dirname "$0")" && pwd)"
+
 echo "=== Research Agent Workshop — Setup Verification ==="
 echo ""
 
@@ -23,23 +25,23 @@ else
 fi
 
 # ── Auth check ──
-# Claude Code uses OAuth (claude.ai login) for interactive use.
-# ANTHROPIC_API_KEY is needed for demo commands (claude -p) and evaluate.py LLM mode.
+# Detect auth mode and write to .workshop_env so all run.sh scripts inherit it.
+# --bare requires ANTHROPIC_API_KEY; plain -p works with OAuth.
+WORKSHOP_ENV="$REPO_ROOT/.workshop_env"
 if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
-    echo "✓ ANTHROPIC_API_KEY is set  (presenter mode — demo commands + LLM scoring work)"
+    echo "✓ ANTHROPIC_API_KEY is set  (API key mode — demo commands + LLM scoring work)"
+    echo 'CLAUDE_AUTH_MODE=apikey' > "$WORKSHOP_ENV"
+    PASS=$((PASS + 1))
+elif claude auth status &>/dev/null 2>&1; then
+    echo "✓ Claude Code logged in via claude.ai  (OAuth mode — all commands work)"
+    echo 'CLAUDE_AUTH_MODE=oauth' > "$WORKSHOP_ENV"
     PASS=$((PASS + 1))
 else
-    # Check if logged in via OAuth instead
-    if claude auth status &>/dev/null 2>&1; then
-        echo "✓ Claude Code logged in via claude.ai  (student mode — interactive build works)"
-        echo "  Note: set ANTHROPIC_API_KEY for demo commands and LLM scoring"
-        PASS=$((PASS + 1))
-    else
-        echo "✗ Not authenticated"
-        echo "  Presenters: export ANTHROPIC_API_KEY=sk-ant-..."
-        echo "  Students:   claude auth login"
-        FAIL=$((FAIL + 1))
-    fi
+    echo "✗ Not authenticated"
+    echo "  Option 1: claude auth login  (recommended)"
+    echo "  Option 2: export ANTHROPIC_API_KEY=sk-ant-..."
+    rm -f "$WORKSHOP_ENV"
+    FAIL=$((FAIL + 1))
 fi
 
 # ── Python ──
