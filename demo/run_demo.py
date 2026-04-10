@@ -30,6 +30,15 @@ REPO = Path(__file__).resolve().parent.parent
 DEMO_DIR = REPO / "demo"
 QUESTION = (DEMO_DIR / "QUESTION.txt").read_text().strip()
 
+# Load .env if present (for ANTHROPIC_API_KEY → LLM scoring)
+_env_path = REPO / ".env"
+if _env_path.exists():
+    for _line in _env_path.read_text().splitlines():
+        _line = _line.strip()
+        if _line and not _line.startswith("#") and "=" in _line:
+            _k, _v = _line.split("=", 1)
+            os.environ.setdefault(_k.strip(), _v.strip().strip("'\""))
+
 console = Console()
 
 # ── Step metadata ────────────────────────────────────────────────────
@@ -362,11 +371,22 @@ def score_output(output_path: Path, step: int, color: str) -> float | None:
         ))
         return None
 
+    # Use LLM scoring when ANTHROPIC_API_KEY is set, heuristic otherwise.
+    # LLM scoring gives real justifications; heuristic uses regex patterns.
+    scorer_flags = ["--input", str(output_path), "--question", QUESTION, "--verbose"]
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        scorer_flags.append("--quick")
+        scoring_mode = "heuristic"
+    else:
+        scoring_mode = "LLM-as-judge"
+
+    console.print(f"  [dim]Scoring mode: {scoring_mode}[/dim]")
+    console.print()
+
     try:
         result = subprocess.run(
-            [sys.executable, str(scorer), "--input", str(output_path),
-             "--quick", "--question", QUESTION, "--verbose"],
-            capture_output=True, text=True, timeout=30,
+            [sys.executable, str(scorer)] + scorer_flags,
+            capture_output=True, text=True, timeout=120,
         )
     except Exception as e:
         console.print(f"[red]Scoring failed: {e}[/red]")
