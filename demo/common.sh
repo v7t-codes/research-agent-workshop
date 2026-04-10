@@ -6,30 +6,20 @@
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 Q="$(cat "$REPO/demo/QUESTION.txt")"
 
-# Load auth mode from verify.sh
-ENV_FILE="$REPO/.workshop_env"
-if [ -f "$ENV_FILE" ]; then
-    source "$ENV_FILE"
-else
-    # Fallback detection if verify.sh wasn't run
-    if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
-        CLAUDE_AUTH_MODE=apikey
-    else
-        CLAUDE_AUTH_MODE=oauth
-    fi
+# Load .env if present (for ANTHROPIC_API_KEY)
+if [ -f "$REPO/.env" ]; then
+    set -a
+    source "$REPO/.env"
+    set +a
 fi
 
 # Model: override with DEMO_MODEL env var (e.g., DEMO_MODEL=haiku for speed)
 MODEL="${DEMO_MODEL:-sonnet}"
 
-# Build flags based on auth mode
-# --bare skips CLAUDE.md auto-discovery, hooks, plugins — fast + isolated.
-# Without --bare, add --no-session-persistence to prevent context bleed.
-if [ "$CLAUDE_AUTH_MODE" = "apikey" ]; then
-    CLAUDE_FLAGS="-p --bare --model $MODEL --dangerously-skip-permissions"
-else
-    CLAUDE_FLAGS="-p --model $MODEL --dangerously-skip-permissions --no-session-persistence"
-fi
+# --bare is critical: skips CLAUDE.md auto-discovery, hooks, plugins.
+# Without it, Claude crawls the entire repo and takes 2-3 minutes.
+# --bare requires ANTHROPIC_API_KEY (loaded from .env above).
+CLAUDE_FLAGS="-p --bare --model $MODEL --dangerously-skip-permissions"
 
 # Scorer helper — silently skips if evaluate.py is absent (students)
 score_output() {
