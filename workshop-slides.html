@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Build Your Research Agent — IISc Workshop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,400&family=IBM+Plex+Mono:wght@400;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg:      #f5f2ec;
+  --surface: #edeae3;
+  --border:  #d6d1c7;
+  --text:    #1a1815;
+  --muted:   #5a5550;
+  --dim:     #9a9590;
+  --accent:  #c46a1e;
+  --serif:   'Fraunces', Georgia, serif;
+  --mono:    'IBM Plex Mono', 'Courier New', monospace;
+  --sans:    'DM Sans', system-ui, sans-serif;
+}
+
+html {
+  scroll-snap-type: y mandatory;
+  overflow-y: scroll;
+  background: var(--bg);
+}
+
+body {
+  font-family: var(--sans);
+  color: var(--text);
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+}
+
+.slide {
+  width: 100vw;
+  height: 100vh;
+  scroll-snap-align: start;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.counter {
+  position: absolute;
+  bottom: 24px;
+  right: 32px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--dim);
+  letter-spacing: 1px;
+}
+
+.print-btn {
+  position: fixed;
+  top: 16px;
+  right: 24px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--dim);
+  letter-spacing: 1px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  z-index: 100;
+  text-transform: uppercase;
+  opacity: 0.55;
+}
+.print-btn:hover { color: var(--accent); border-color: var(--accent); opacity: 1; }
+
+h1 {
+  font-family: var(--serif);
+  font-size: clamp(38px, 5vw, 66px);
+  font-weight: 900;
+  line-height: 1.0;
+  letter-spacing: -2px;
+  color: var(--text);
+}
+h2 {
+  font-family: var(--serif);
+  font-size: clamp(26px, 3.2vw, 46px);
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -1.5px;
+  color: var(--text);
+}
+
+.section-header {
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.5px;
+  margin-bottom: 12px;
+  line-height: 1.2;
+}
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 18px;
+}
+
+ul.bullets {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+ul.bullets li {
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--muted);
+  font-weight: 400;
+  padding-left: 18px;
+  position: relative;
+}
+ul.bullets li::before {
+  content: '—';
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 600;
+}
+ul.bullets li strong {
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* ════════════════════════════
+   SLIDE 1 — THE OPENING
+════════════════════════════ */
+.s1 {
+  display: grid;
+  grid-template-rows: 1fr auto;
+}
+
+.s1-main {
+  display: grid;
+  grid-template-columns: 1.55fr 1fr;
+  border-bottom: 1px solid var(--border);
+  flex: 1;
+}
+
+.s1-message {
+  padding: 60px 56px 52px 68px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border-right: 1px solid var(--border);
+}
+
+.s1-message h1 { margin-bottom: 24px; }
+
+.s1-subtitle {
+  font-size: 18px;
+  line-height: 1.65;
+  color: var(--muted);
+  font-weight: 300;
+  max-width: 500px;
+  font-style: italic;
+  font-family: var(--serif);
+}
+.s1-subtitle strong {
+  color: var(--accent);
+  font-weight: 700;
+  font-style: normal;
+}
+
+/* Staircase */
+.s1-staircase {
+  padding: 60px 68px 52px 48px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.s1-stair-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-bottom: 18px;
+}
+
+.s1-stair-row {
+  display: grid;
+  grid-template-columns: 20px 1fr 56px;
+  gap: 0 12px;
+  align-items: baseline;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+}
+.s1-stair-row:first-of-type { border-top: 1px solid var(--border); }
+
+.s1-stair-row .n {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--dim);
+}
+.s1-stair-row .name {
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 400;
+}
+.s1-stair-row .name strong {
+  color: var(--text);
+  font-weight: 500;
+  font-size: 13px;
+}
+.s1-stair-row .score {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: right;
+}
+.s1-stair-row.s-low  .score { color: var(--dim); }
+.s1-stair-row.s-mid  .score { color: var(--muted); }
+.s1-stair-row.s-high .score { color: #b06820; }
+.s1-stair-row.s-peak .score { color: var(--accent); }
+
+.s1-stair-note {
+  margin-top: 14px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--dim);
+  letter-spacing: 0.3px;
+  line-height: 1.6;
+}
+
+/* Footer */
+.s1-footer {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.s1-footer-cell {
+  padding: 18px 24px;
+  border-right: 1px solid var(--border);
+}
+.s1-footer-cell:first-child { padding-left: 68px; }
+.s1-footer-cell:last-child { border-right: none; }
+
+.s1-footer-cell .label {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-bottom: 4px;
+}
+.s1-footer-cell .value {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+
+/* ════════════════════════════
+   SLIDE 2 — PRACTITIONER CASE
+════════════════════════════ */
+.s2 {
+  display: flex;
+  flex-direction: column;
+}
+
+.s2-top {
+  padding: 52px 68px 36px 68px;
+  border-bottom: 1px solid var(--border);
+}
+
+.s2-top h2 { margin-bottom: 0; }
+
+.s2-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  border-bottom: 1px solid var(--border);
+}
+
+.s2-col {
+  padding: 36px 40px;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.s2-col:last-child { border-right: none; }
+
+.s2-bottom {
+  padding: 20px 68px 24px 68px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.s2-bottom-pipe {
+  width: 3px;
+  height: 36px;
+  background: var(--accent);
+  flex-shrink: 0;
+  border-radius: 2px;
+}
+
+.s2-bottom-text {
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--muted);
+  font-weight: 400;
+  max-width: 760px;
+}
+.s2-bottom-text strong {
+  color: var(--text);
+  font-weight: 500;
+}
+
+
+/* ════════════════════════════
+   SLIDE 3 — FIRST HALF
+════════════════════════════ */
+.s3 {
+  display: flex;
+  flex-direction: column;
+}
+
+.s3-top {
+  padding: 44px 68px 32px 68px;
+  border-bottom: 1px solid var(--border);
+}
+
+.s3-top h2 { margin-bottom: 0; }
+
+.s3-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.s3-left {
+  padding: 36px 52px 36px 68px;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 0;
+}
+
+.s3-left-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-bottom: 16px;
+}
+
+.s3-step-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.s3-step {
+  display: grid;
+  grid-template-columns: 20px 88px 1fr;
+  gap: 0 14px;
+  align-items: baseline;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--border);
+}
+.s3-step:first-child { border-top: 1px solid var(--border); }
+
+.s3-step .n {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--dim);
+}
+.s3-step .time {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--dim);
+}
+.s3-step .concept {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text);
+}
+.s3-step .concept em {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--muted);
+  font-family: var(--sans);
+  font-style: normal;
+  display: block;
+  margin-top: 2px;
+}
+
+.s3-right {
+  padding: 36px 68px 36px 52px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 32px;
+}
+
+.s3-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+
+/* ════════════════════════════
+   SLIDE 4 — SECOND HALF
+════════════════════════════ */
+.s4 {
+  display: flex;
+  flex-direction: column;
+}
+
+.s4-top {
+  padding: 44px 68px 32px 68px;
+  border-bottom: 1px solid var(--border);
+}
+
+.s4-top h2 { margin-bottom: 0; }
+
+.s4-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.s4-left {
+  padding: 36px 52px 36px 68px;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.s4-left-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-bottom: 16px;
+}
+
+.s4-task-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.s4-task {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 0 16px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+  align-items: start;
+}
+.s4-task:first-child { border-top: 1px solid var(--border); }
+
+.s4-task .n {
+  font-family: var(--mono);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--accent);
+  line-height: 1.3;
+  padding-top: 1px;
+}
+
+.s4-task .title {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+  line-height: 1.3;
+  font-family: var(--mono);
+}
+
+.s4-task .detail {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.s4-right {
+  padding: 36px 68px 36px 52px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.s4-schedule {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.s4-sched-row {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: 0 14px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+  align-items: baseline;
+}
+.s4-sched-row:first-child { border-top: 1px solid var(--border); }
+
+.s4-sched-row .t {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--dim);
+}
+.s4-sched-row .ev {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text);
+}
+.s4-sched-row .ev.highlight {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.s4-winning-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.s4-footer {
+  padding: 16px 68px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.s4-footer .repo-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.s4-footer .repo-url {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+
+/* ════════════════════════════
+   PRINT / PDF
+════════════════════════════ */
+@media print {
+  html { scroll-snap-type: none; overflow: visible; }
+  .print-btn { display: none; }
+  .slide {
+    page-break-after: always;
+    height: 100vh;
+    overflow: hidden;
+  }
+  .counter { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════
+     SLIDE 1 — THE OPENING
+════════════════════════════════════════════════════ -->
+<section class="slide s1">
+
+  <div class="s1-main" style="grid-template-columns:1fr;border-bottom:none;">
+    <div class="s1-message" style="border-right:none;justify-content:center;padding:80px 100px;">
+      <div class="eyebrow">IISc Workshop · April 2026</div>
+      <h1 style="margin-bottom:36px;">Build Your<br>Research Agent</h1>
+      <p class="s1-subtitle" style="font-size:20px;max-width:700px;line-height:1.65;">
+        In this session, you build the scaffolding around a language model — context, tools, methodology, and agents — that turns it into something capable of doing real, specific, knowledge-intensive work.
+        You watch it built from scratch, layer by layer. Then you build your own.
+      </p>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="s1-footer">
+    <div class="s1-footer-cell">
+      <div class="label">Presenters</div>
+      <div class="value">Rachitt &amp; Vishwajit</div>
+    </div>
+    <div class="s1-footer-cell">
+      <div class="label">Venue</div>
+      <div class="value">IISc Bangalore · April 2026</div>
+    </div>
+    <div class="s1-footer-cell">
+      <div class="label">Repo</div>
+      <div class="value">github.com/v7t-codes/research-agent-workshop</div>
+    </div>
+  </div>
+
+  <div class="counter">01 / 04</div>
+</section>
+
+
+<!-- ════════════════════════════════════════════════════
+     SLIDE 2 — THE PRACTITIONER CASE
+════════════════════════════════════════════════════ -->
+<section class="slide s2">
+
+  <div class="s2-top">
+    <div class="eyebrow">Why this matters to you</div>
+    <h2>The practitioner case</h2>
+  </div>
+
+  <div class="s2-body">
+
+    <!-- Column 1 -->
+    <div class="s2-col">
+      <div class="section-header">Scale your output</div>
+      <ul class="bullets">
+        <li>Research <strong>10x faster</strong> — literature reviews in minutes, not days</li>
+        <li>Run <strong>parallel threads</strong> — multiple agents exploring simultaneously</li>
+        <li><strong>Auto-verification</strong> — a second process audits every claim</li>
+      </ul>
+    </div>
+
+    <!-- Column 2 -->
+    <div class="s2-col">
+      <div class="section-header">Apply to real problems</div>
+      <ul class="bullets">
+        <li><strong>Domain-agnostic</strong> — company building, diligence, market analysis</li>
+        <li>Any <strong>knowledge-intensive</strong> task becomes agentic</li>
+        <li>The harness is <strong>reusable</strong> — swap the domain, keep the system</li>
+      </ul>
+    </div>
+
+    <!-- Column 3 -->
+    <div class="s2-col">
+      <div class="section-header">The compounding edge</div>
+      <ul class="bullets">
+        <li><strong>Cursor, Sierra, Decagon</strong> do this at scale — you're building a narrow version</li>
+        <li>The <strong>window is still open</strong> — most practitioners haven't built this yet</li>
+        <li>Capability is cheap; <strong>closing the gap to useful output</strong> is the skill</li>
+      </ul>
+    </div>
+
+  </div>
+
+  <div class="s2-bottom">
+    <div class="s2-bottom-pipe"></div>
+    <div class="s2-bottom-text">
+      The harness gets absorbed into the platform over time. <strong>The durable skill is knowing how to close the gap between what a model can do and what produces useful output.</strong>
+    </div>
+  </div>
+
+  <div class="counter">02 / 04</div>
+</section>
+
+
+<!-- ════════════════════════════════════════════════════
+     SLIDE 3 — FIRST HALF (4:00–5:00 PM)
+════════════════════════════════════════════════════ -->
+<section class="slide s3">
+
+  <div class="s3-top">
+    <div class="eyebrow">4:00 – 5:00 PM</div>
+    <h2>First half: we show it</h2>
+  </div>
+
+  <div class="s3-body">
+
+    <!-- Left: 6 demo steps -->
+    <div class="s3-left">
+      <div class="s3-left-label">Live demo — 6 steps</div>
+      <div class="s3-step-list">
+        <div class="s3-step">
+          <span class="n">0</span>
+          <span class="time">4:00</span>
+          <span class="concept">Raw Claude<em>No setup. Baseline score.</em></span>
+        </div>
+        <div class="s3-step">
+          <span class="n">1</span>
+          <span class="time">4:05</span>
+          <span class="concept">CLAUDE.md<em>20-line context file. Domain, sources, constraints.</em></span>
+        </div>
+        <div class="s3-step">
+          <span class="n">2</span>
+          <span class="time">4:12</span>
+          <span class="concept">SKILL.md<em>Research methodology. Decompose, search, synthesize.</em></span>
+        </div>
+        <div class="s3-step">
+          <span class="n">3</span>
+          <span class="time">4:20</span>
+          <span class="concept">MCP server<em>50 lines of Python. Live arXiv and Semantic Scholar.</em></span>
+        </div>
+        <div class="s3-step">
+          <span class="n">4</span>
+          <span class="time">4:30</span>
+          <span class="concept">Iterative skill<em>Loop logic. Claude evaluates its own coverage.</em></span>
+        </div>
+        <div class="s3-step">
+          <span class="n">5</span>
+          <span class="time">4:40</span>
+          <span class="concept">Verification agent<em>Separate Claude subprocess. Audits every citation.</em></span>
+        </div>
+        <div class="s3-step">
+          <span class="n">6</span>
+          <span class="time">4:50</span>
+          <span class="concept">Team of agents<em>Searcher → Critic → Synthesizer. Files, not shared memory.</em></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: what you'll see + the key shift -->
+    <div class="s3-right">
+
+      <div class="s3-block">
+        <div class="section-header">What you'll see</div>
+        <ul class="bullets">
+          <li><strong>Live API calls to arXiv</strong> — real 2025 papers fetched in session</li>
+          <li>A <strong>second process spawning</strong> — the verification agent runs in its own context</li>
+          <li><strong>Agents writing files</strong> — searcher, critic, synthesizer communicate through disk</li>
+        </ul>
+      </div>
+
+      <div class="s3-block">
+        <div class="section-header">The key shift</div>
+        <ul class="bullets">
+          <li><strong>Steps 1–4</strong> run in one session — same context window, same agent</li>
+          <li><strong>Step 5</strong> spawns an independent subprocess — a fresh Claude with no history</li>
+          <li>That <strong>independence is why verification works</strong> — no confirmation bias from the original session</li>
+        </ul>
+      </div>
+
+    </div>
+
+  </div>
+
+  <div class="counter">03 / 04</div>
+</section>
+
+
+<!-- ════════════════════════════════════════════════════
+     SLIDE 4 — SECOND HALF (5:00–7:00 PM)
+════════════════════════════════════════════════════ -->
+<section class="slide s4">
+
+  <div class="s4-top">
+    <div class="eyebrow">5:00 – 7:00 PM</div>
+    <h2>Second half: you build it</h2>
+  </div>
+
+  <div class="s4-body">
+
+    <!-- Left: what you're building -->
+    <div class="s4-left">
+      <div class="s4-left-label">Groups of 2–3 · 90 minutes</div>
+      <div style="display:flex;flex-direction:column;gap:28px;padding-top:8px">
+
+        <div>
+          <div class="section-header">What you're building</div>
+          <ul class="bullets" style="margin-top:10px">
+            <li>A <strong>research agent for your own domain</strong> — not ours</li>
+            <li>Your own CLAUDE.md, SKILL.md, and a custom MCP tool calling a real API</li>
+            <li>Agent architecture: verification subprocess or full searcher → critic → synthesizer team</li>
+          </ul>
+        </div>
+
+        <div>
+          <div class="section-header">One rule</div>
+          <ul class="bullets" style="margin-top:10px">
+            <li>You can <strong>read the demo</strong> as reference — you cannot copy it</li>
+            <li>Different domain, different methodology, different tool — <strong>write it yourself</strong></li>
+          </ul>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Right: the competition -->
+    <div class="s4-right">
+
+      <div>
+        <div class="section-header">The competition</div>
+        <ul class="bullets" style="margin-top:12px">
+          <li>At 6:30 PM, your agent runs against <strong>3 unseen research questions</strong></li>
+          <li><strong>Average RACE score</strong> across all 3 = your result</li>
+          <li>Top 3 present: score progression, one design decision, one surprise</li>
+          <li>Audience votes separately for <strong>best design</strong> — a creative tool that scores 70 beats a copied one that scores 80</li>
+        </ul>
+      </div>
+
+      <div class="s4-winning-block">
+        <div class="section-header">What wins</div>
+        <ul class="bullets" style="margin-top:12px">
+          <li><strong>Highest score</strong> — comprehensiveness, insight, verified citations</li>
+          <li><strong>Best design</strong> — the most interesting architectural choice, not the highest number</li>
+        </ul>
+      </div>
+
+    </div>
+
+  </div>
+
+  <div class="s4-footer">
+    <span class="repo-label">Repo</span>
+    <span class="repo-url">github.com/v7t-codes/research-agent-workshop</span>
+  </div>
+
+  <div class="counter">04 / 04</div>
+</section>
+
+</body>
+</html>
