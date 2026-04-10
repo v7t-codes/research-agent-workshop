@@ -19,7 +19,7 @@ MODEL="${DEMO_MODEL:-sonnet}"
 # --bare is critical: skips CLAUDE.md auto-discovery, hooks, plugins.
 # Without it, Claude crawls the entire repo and takes 2-3 minutes.
 # --bare requires ANTHROPIC_API_KEY (loaded from .env above).
-CLAUDE_FLAGS="-p --bare --model $MODEL --dangerously-skip-permissions"
+CLAUDE_FLAGS="-p --bare --model $MODEL"
 
 # Scorer helper — silently skips if evaluate.py is absent (students)
 score_output() {
