@@ -343,14 +343,30 @@ def run_step(step: int, prev_score: float = 0) -> tuple[str, float]:
         env=env,
     )
 
-    # Stream run.sh output live to terminal
+    # Stream run.sh output live to terminal.
+    # run.sh pipes through `tee` which buffers — show a spinner while waiting.
+    import threading
+
+    done_event = threading.Event()
     run_output = []
-    for line in proc.stdout:
-        run_output.append(line)
-        # Show non-empty lines
-        stripped = line.rstrip()
-        if stripped:
-            console.print(f"  [dim]{stripped}[/dim]")
+
+    def read_output():
+        for line in proc.stdout:
+            run_output.append(line)
+            stripped = line.rstrip()
+            if stripped:
+                console.print(f"  {stripped}")
+        done_event.set()
+
+    reader = threading.Thread(target=read_output, daemon=True)
+    reader.start()
+
+    # Show elapsed time while waiting
+    while not done_event.is_set():
+        elapsed_so_far = time.time() - start
+        console.print(f"\r  [dim]⏳ {elapsed_so_far:.0f}s elapsed...[/dim]", end="")
+        done_event.wait(timeout=3)
+    console.print()  # clear the timer line
 
     proc.wait()
     elapsed = time.time() - start
