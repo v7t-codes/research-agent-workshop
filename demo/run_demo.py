@@ -289,7 +289,11 @@ def build_command(step: int) -> list[str]:
     elif os.environ.get("ANTHROPIC_API_KEY"):
         auth_mode = "apikey"
 
-    cmd = ["claude", "-p", "--model", "sonnet",
+    # Steps 1-2 use haiku (fast, no tools needed — ~10s each)
+    # Steps 3-6 use sonnet (tools + agents need reasoning depth — ~60-180s each)
+    model = "haiku" if step <= 2 else "sonnet"
+
+    cmd = ["claude", "-p", "--model", model,
            "--output-format", "stream-json", "--verbose",
            "--dangerously-skip-permissions",
            "--no-session-persistence"]
@@ -532,10 +536,11 @@ def score_output(output_path: Path, step: int, color: str) -> float | None:
 
 # ── Run a step ───────────────────────────────────────────────────────
 
-def run_step(step: int) -> tuple[str, float]:
+def run_step(step: int, prev_score: float = 0) -> tuple[str, float]:
     meta = STEPS[step]
     step_dir = DEMO_DIR / f"step-{step}"
     color = meta["color"]
+    model = "haiku" if step <= 2 else "sonnet"
 
     # ── Header ──
     console.print()
@@ -588,7 +593,7 @@ def run_step(step: int) -> tuple[str, float]:
 
     # ── Run claude ──
     cmd = build_command(step)
-    console.print(Rule(f"[bold]Running Step {step}[/bold]", style="bright_white"))
+    console.print(Rule(f"[bold]Running Step {step}  (model: {model})[/bold]", style="bright_white"))
     console.print()
 
     start = time.time()
@@ -746,13 +751,24 @@ def run_step(step: int) -> tuple[str, float]:
                 if m:
                     ref_score = float(m.group(1))
         if ref_score is not None:
+            # Delta from previous step
+            delta_text = ""
+            if prev_score > 0 and score:
+                delta = score - prev_score
+                delta_color = "green" if delta > 0 else "red" if delta < 0 else "dim"
+                delta_sign = "+" if delta > 0 else ""
+                delta_text = f"\n[bold]Delta from step {step - 1}:[/bold]  [{delta_color}]{delta_sign}{delta:.1f} points[/{delta_color}]"
+                if delta > 15:
+                    delta_text += f"  [green bold]← Big jump! This is what {meta['title'].split('(')[0].strip()} adds.[/green bold]"
+                elif delta < 0:
+                    delta_text += "  [dim](live variance — reference shows the expected trend)[/dim]"
+
             console.print(Panel(
                 f"[bold]Live score:[/bold]      {score or '?'}/100\n"
-                f"[bold]Reference score:[/bold]  {ref_score}/100  [dim](pre-computed, clean environment)[/dim]\n\n"
-                f"[dim]Reference scores represent the expected staircase: "
-                f"20 → 21 → 37 → 58 → 53 → 90 → 93. "
-                f"Live scores vary with model randomness, tool availability, "
-                f"and network conditions. The TREND matters more than exact numbers.[/dim]",
+                f"[bold]Reference score:[/bold]  {ref_score}/100  [dim](pre-computed, clean environment)[/dim]"
+                f"{delta_text}\n\n"
+                f"[dim]Expected staircase: 20 → 21 → 37 → 58 → 53 → 90 → 93. "
+                f"Live scores vary. The TREND matters more than exact numbers.[/dim]",
                 title="[bold]📈 Score Comparison[/bold]",
                 border_style="bright_white",
                 width=min(console.width, 110),
@@ -851,12 +867,14 @@ def main():
     ))
 
     scores = {}
+    prev_score = 0
     for step in steps:
         if step not in STEPS:
             console.print(f"[red]Unknown step: {step}[/red]")
             continue
-        _, score = run_step(step)
+        _, score = run_step(step, prev_score=prev_score)
         scores[step] = score
+        prev_score = score
 
     if len(scores) > 1:
         show_staircase(scores)
