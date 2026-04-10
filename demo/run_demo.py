@@ -354,6 +354,42 @@ def build_command(step: int) -> list[str]:
     return cmd
 
 
+# ── Dimension definitions (what each eval measures + how to improve) ─
+
+DIM_INFO = {
+    "comprehensiveness": {
+        "label": "Comprehensiveness",
+        "weight": 0.30,
+        "what": "Does the report cover all sub-topics with specific numbers, multiple perspectives, and diverse sources?",
+        "fix": "Add more sub-questions in decomposition. Attribute every number to a source. Include 'at least 3 perspectives' in SKILL.md.",
+    },
+    "insight": {
+        "label": "Insight",
+        "weight": 0.35,
+        "what": "Does the report go beyond description to causal reasoning? Does it show where sources conflict and explain WHY?",
+        "fix": "Add 'where do sources disagree?' to SKILL.md. Add a critic agent (step 6) for STRONG/MODERATE/WEAK evidence ratings.",
+    },
+    "instruction_following": {
+        "label": "Instruction Following",
+        "weight": 0.20,
+        "what": "Did it address every part of the question, stay in scope, and match the requested format?",
+        "fix": "Ensure decomposition echoes every keyword from the question. Add explicit output format template to SKILL.md.",
+    },
+    "readability": {
+        "label": "Readability",
+        "weight": 0.15,
+        "what": "Thesis upfront, organized by theme not source, logical flow, comparison tables, references section.",
+        "fix": "Add '## References' section to output template. Add 'include comparison table'. Use transition phrases.",
+    },
+    "citation_bonus": {
+        "label": "Citation Bonus",
+        "weight": 0.10,
+        "what": "Real URLs, quoted paper titles, arXiv IDs, DOIs. The bridge between 'sounds good' and 'is verifiable.'",
+        "fix": "Add MCP tools (step 3) for real URLs. Use search_arxiv for arXiv IDs. Add 'cite Author (Year)' to SKILL.md.",
+    },
+}
+
+
 # ── Score with full RACE breakdown ───────────────────────────────────
 
 def score_output(output_path: Path, step: int, color: str) -> float | None:
@@ -371,46 +407,42 @@ def score_output(output_path: Path, step: int, color: str) -> float | None:
         ))
         return None
 
-    # Use LLM scoring when ANTHROPIC_API_KEY is set, heuristic otherwise.
-    # LLM scoring gives real justifications; heuristic uses regex patterns.
-    scorer_flags = ["--input", str(output_path), "--question", QUESTION, "--verbose"]
     if not os.environ.get("ANTHROPIC_API_KEY"):
-        scorer_flags.append("--quick")
-        scoring_mode = "heuristic"
-    else:
-        scoring_mode = "LLM-as-judge"
+        console.print("[red]ANTHROPIC_API_KEY not set — cannot run live LLM scoring.[/red]")
+        console.print("[dim]Set it in .env or export it, then re-run.[/dim]")
+        return None
 
-    console.print(f"  [dim]Scoring mode: {scoring_mode}[/dim]")
+    console.print("  [dim]Scoring: Claude Sonnet judges the output on 5 RACE dimensions...[/dim]")
     console.print()
 
     try:
         result = subprocess.run(
-            [sys.executable, str(scorer)] + scorer_flags,
+            [sys.executable, str(scorer), "--input", str(output_path),
+             "--question", QUESTION, "--verbose"],
             capture_output=True, text=True, timeout=120,
         )
     except Exception as e:
         console.print(f"[red]Scoring failed: {e}[/red]")
         return None
 
-    # Parse the full output for dimension scores
+    # Parse the JSON from verbose output
     score_data = {}
     try:
-        # Find the JSON in verbose output
         for line in result.stdout.splitlines():
             line = line.strip()
             if line.startswith("{") and "weighted_total" in line:
                 score_data = json.loads(line)
                 break
         if not score_data and "weighted_total" in result.stdout:
-            # Try to extract JSON block
-            json_match = re.search(r'\{[^{}]*"weighted_total"[^{}]*\}', result.stdout, re.DOTALL)
+            json_match = re.search(
+                r"\{[^{}]*\"weighted_total\"[^{}]*\}", result.stdout, re.DOTALL
+            )
             if json_match:
                 score_data = json.loads(json_match.group())
     except (json.JSONDecodeError, AttributeError):
         pass
 
     if not score_data:
-        # Fallback: just get the total
         for line in result.stdout.splitlines():
             if "TOTAL SCORE" in line:
                 m = re.search(r"([\d.]+)/100", line)
@@ -419,132 +451,53 @@ def score_output(output_path: Path, step: int, color: str) -> float | None:
         return None
 
     total = score_data.get("weighted_total", 0)
-    raw_total = score_data.get("_raw_total", "?")
-    factor = score_data.get("_source_factor", "?")
 
-    # Build the RACE breakdown table
-    table = Table(title=f"[bold]RACE Score Breakdown — Step {step}[/bold]",
-                  show_lines=True, width=min(console.width, 100))
-    table.add_column("Dimension", style="bold")
-    table.add_column("Score", justify="center", width=6)
-    table.add_column("", width=22)
-    table.add_column("Weight", justify="center", width=8)
-    table.add_column("Justification", style="dim")
-
-    dims = [
-        ("comprehensiveness", "Comprehensiveness", 0.30),
-        ("insight", "Insight", 0.35),
-        ("instruction_following", "Instruction Following", 0.20),
-        ("readability", "Readability", 0.15),
-        ("citation_bonus", "Citation Bonus", 0.10),
-    ]
-
-    for key, label, weight in dims:
-        if key in score_data:
-            d = score_data[key]
-            s = d["score"] if isinstance(d, dict) else d
-            just = d.get("justification", "") if isinstance(d, dict) else ""
-            bar = f"[{color}]{'█' * int(s)}{'░' * (10 - int(s))}[/{color}]"
-            weight_str = f"{int(weight * 100)}%"
-            table.add_row(label, f"{s}/10", bar, weight_str, just[:60])
-
-    console.print(table)
-    console.print()
-
-    # Total score with big visual
-    bar_len = int(total / 5)
-    bar = f"[bold {color}]{'█' * bar_len}{'░' * (20 - bar_len)}[/bold {color}]"
-    console.print(f"  {bar}  [bold]{total}/100[/bold]", highlight=False)
-    console.print(f"  [dim]Raw score: {raw_total}  ×  Source grounding factor: {factor}[/dim]")
-    console.print()
-
-    # ── Score explanation: what each dimension means + diagnosis ──
-    dim_explanations = {
-        "comprehensiveness": {
-            "measures": "Coverage breadth — does the report cover all sub-topics, include specific data points, represent multiple perspectives, and use diverse sources?",
-            "low_fix": "Add more sub-questions in decomposition. Include 'at least 3 perspectives' in SKILL.md. Attribute every number to a source.",
-        },
-        "insight": {
-            "measures": "Analysis depth — does the report go beyond description to causal reasoning? Does it identify where sources conflict and explain WHY? Does it include evidence quality ratings?",
-            "low_fix": "Add 'where do sources disagree?' to SKILL.md. Add a critic agent (step 6) for STRONG/MODERATE/WEAK ratings. Add verification markers (step 5).",
-        },
-        "instruction_following": {
-            "measures": "Did the report address every part of the original question? Does it stay in scope? Does it match the requested format (comparison, evaluation, etc.)?",
-            "low_fix": "Ensure decomposition echoes every keyword from the question. Add explicit output format template to SKILL.md.",
-        },
-        "readability": {
-            "measures": "Structure and clarity — thesis statement upfront, organized by theme not source, logical flow, comparison tables, references section.",
-            "low_fix": "Add '## References' section to output template. Add 'include comparison table' instruction. Use transition phrases.",
-        },
-        "citation_bonus": {
-            "measures": "Verifiable sources — real URLs, quoted paper titles, arXiv IDs, year references, DOIs. This is the bridge between 'sounds good' and 'is verified.'",
-            "low_fix": "Add custom MCP tools (step 3) for real URLs. Use search_arxiv for arXiv IDs. Add 'quote paper titles and include (Year)' to SKILL.md.",
-        },
-    }
-
-    # Find the weakest dimension to highlight
+    # ── Per-dimension breakdown with explanation ──
     dim_scores = {}
-    for key, label, weight in dims:
-        if key in score_data:
-            d = score_data[key]
-            s = d["score"] if isinstance(d, dict) else d
-            dim_scores[key] = s
+    for key, info in DIM_INFO.items():
+        if key not in score_data:
+            continue
+        d = score_data[key]
+        s = d["score"] if isinstance(d, dict) else d
+        just = d.get("justification", "") if isinstance(d, dict) else ""
+        dim_scores[key] = s
 
+        bar = f"[{color}]{'█' * int(s)}{'░' * (10 - int(s))}[/{color}]"
+        weighted = s * info["weight"] * 10
+
+        console.print(
+            f"  [bold]{info['label']}[/bold]  ({int(info['weight'] * 100)}% weight)"
+        )
+        console.print(
+            f"  {bar}  [bold]{s}/10[/bold]  →  {weighted:.1f} points"
+        )
+        if just:
+            console.print(f"  [italic]{just}[/italic]")
+        console.print(f"  [dim]What this measures: {info['what']}[/dim]")
+        console.print()
+
+    # ── Total ──
+    bar_len = int(total / 2.5)
+    bar = f"[bold {color}]{'█' * bar_len}{'░' * (40 - bar_len)}[/bold {color}]"
+    console.print(Rule("[bold]Total[/bold]"))
+    console.print(f"  {bar}  [bold]{total}/100[/bold]")
+    console.print()
+
+    # ── Weakest dimension diagnosis ──
     if dim_scores:
         weakest = min(dim_scores, key=dim_scores.get)
         strongest = max(dim_scores, key=dim_scores.get)
 
-        explanation_lines = []
-
-        # Explain the source grounding factor
-        if isinstance(factor, (int, float)):
-            if factor < 0.5:
-                explanation_lines.append(
-                    f"[yellow bold]Source Grounding Factor: {factor}[/yellow bold]\n"
-                    "The output has few or no real URLs. The scorer applies a penalty because "
-                    "reports without external sources rely on training data — they can't be "
-                    "verified. [bold]Adding tools (step 3) is the single biggest unlock.[/bold]"
-                )
-            elif factor < 0.8:
-                explanation_lines.append(
-                    f"[bold]Source Grounding Factor: {factor}[/bold]\n"
-                    "The output has real URLs from tools. The factor is moderate — more sources "
-                    "or adding verification/evidence quality markers will push it toward 1.0."
-                )
-            elif factor >= 1.0:
-                explanation_lines.append(
-                    f"[green bold]Source Grounding Factor: {factor}[/green bold]\n"
-                    "Full source grounding unlocked. The output has real external sources and/or "
-                    "evidence quality ratings from verification/team agents."
-                )
-
-        # Explain weakest dimension
-        if weakest in dim_explanations:
-            exp = dim_explanations[weakest]
-            explanation_lines.append(
-                f"[yellow bold]Weakest: {weakest.replace('_', ' ').title()} ({dim_scores[weakest]}/10)[/yellow bold]\n"
-                f"What it measures: {exp['measures']}\n"
-                f"[bold]How to improve:[/bold] {exp['low_fix']}"
-            )
-
-        # Explain strongest dimension
-        if strongest in dim_explanations and strongest != weakest:
-            explanation_lines.append(
-                f"[green bold]Strongest: {strongest.replace('_', ' ').title()} ({dim_scores[strongest]}/10)[/green bold]\n"
-                f"What it measures: {dim_explanations[strongest]['measures']}"
-            )
-
-        # Eval-driven development callout
-        explanation_lines.append(
-            "[bold bright_white]This is eval-driven development.[/bold bright_white] "
-            "The score tells you exactly what to fix. Don't guess — read the weakest "
-            "dimension, apply the targeted fix, re-score. Build → Score → Diagnose → Fix → Re-score. "
-            "The eval is a first-class citizen in your agent workflow, not an afterthought."
-        )
-
         console.print(Panel(
-            "\n\n".join(explanation_lines),
-            title="[bold]📊 Score Analysis — What This Means[/bold]",
+            f"[yellow bold]⚠ Weakest: {DIM_INFO[weakest]['label']} "
+            f"({dim_scores[weakest]}/10)[/yellow bold]\n"
+            f"[bold]How to improve:[/bold] {DIM_INFO[weakest]['fix']}\n\n"
+            f"[green bold]✓ Strongest: {DIM_INFO[strongest]['label']} "
+            f"({dim_scores[strongest]}/10)[/green bold]\n\n"
+            "[bold]This is eval-driven development.[/bold] The score tells you exactly "
+            "what to fix. Read the weakest dimension → apply the fix → re-score. "
+            "The eval is a first-class citizen in your agent workflow, not an afterthought.",
+            title="[bold]📊 Diagnosis[/bold]",
             border_style="bright_white",
             width=min(console.width, 110),
             padding=(1, 2),
