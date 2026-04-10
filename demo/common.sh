@@ -19,13 +19,16 @@ else
     fi
 fi
 
+# Model: override with DEMO_MODEL env var (e.g., DEMO_MODEL=haiku for speed)
+MODEL="${DEMO_MODEL:-sonnet}"
+
 # Build flags based on auth mode
-# --bare is faster but requires ANTHROPIC_API_KEY (no OAuth).
-# Plain -p works with both OAuth and API key.
+# --bare skips CLAUDE.md auto-discovery, hooks, plugins — fast + isolated.
+# Without --bare, add --no-session-persistence to prevent context bleed.
 if [ "$CLAUDE_AUTH_MODE" = "apikey" ]; then
-    CLAUDE_FLAGS="-p --bare --model sonnet --dangerously-skip-permissions"
+    CLAUDE_FLAGS="-p --bare --model $MODEL --dangerously-skip-permissions"
 else
-    CLAUDE_FLAGS="-p --model sonnet --dangerously-skip-permissions"
+    CLAUDE_FLAGS="-p --model $MODEL --dangerously-skip-permissions --no-session-persistence"
 fi
 
 # Scorer helper — silently skips if evaluate.py is absent (students)

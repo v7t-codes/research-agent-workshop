@@ -326,16 +326,21 @@ def run_step(step: int, prev_score: float = 0) -> tuple[str, float]:
         console.print(f"[red]run.sh not found in {step_dir}[/red]")
         return "", 0
 
-    console.print(Rule(f"[bold]Running step {step} via run.sh[/bold]", style="bright_white"))
+    # Steps 1-2: use haiku (fast, ~10s). Steps 3-6: sonnet (tools need reasoning).
+    model = "haiku" if step <= 2 else "sonnet"
+    console.print(Rule(f"[bold]Running step {step} (model: {model})[/bold]", style="bright_white"))
     console.print()
 
     start = time.time()
+    env = os.environ.copy()
+    env["DEMO_MODEL"] = model
     proc = subprocess.Popen(
         ["bash", str(run_sh)],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
         cwd=str(step_dir),
+        env=env,
     )
 
     # Stream run.sh output live to terminal
