@@ -57,18 +57,34 @@ pip install -r requirements.txt
 
 ## Workshop Structure
 
-### First half: Demo + teach (see [DEMO.md](DEMO.md))
-Watch each step demonstrated live. Learn the design principles behind each concept.
+### First half: Demo (presenter runs `python demo/run_demo.py all`)
+Watch each step demonstrated live with scoring. Learn the design principles behind each concept.
 
-### Second half: Build + compete (see [BUILD.md](BUILD.md))
+### Second half: Build + compete (see [students/README.md](students/README.md))
 Break into groups. Build your own research agent. Score against the benchmark. Top teams present.
 
-## Each Step
+## Demo Steps
 
-Each step folder contains:
-- **README.md** — what it is, what to do, what changes
-- **TEACHING.md** — design principles (WHY), how to build it (HOW), score impact
-- **The actual files** — CLAUDE.md, SKILL.md, MCP server, etc.
+Each `demo/step-N/` folder is self-contained with `run.sh`:
+```bash
+python demo/run_demo.py 1      # Run step 1 with TUI
+python demo/run_demo.py all    # Run all 6 steps
+cd demo/step-3 && bash run.sh  # Run one step directly
+```
+
+## Competition Scoring
+
+Teams submit 3 reports: `students/<team>/test-{1,2,3}.md`
+
+```bash
+# Score all teams (presenter only — requires evaluate.py + API key)
+bash presenter/score_teams.sh
+
+# Score one team
+bash presenter/score_teams.sh team-alice
+```
+
+Output: sorted leaderboard with per-problem and average scores across 3 test problems.
 
 ## Evaluation
 
