@@ -7,6 +7,13 @@
 
 REPO_ROOT="$(cd "$(dirname "$0")" && pwd)"
 
+# Load .env if present (so ANTHROPIC_API_KEY is available without shell profile edits)
+if [ -f "$REPO_ROOT/.env" ]; then
+    set -a
+    source "$REPO_ROOT/.env"
+    set +a
+fi
+
 echo "=== Research Agent Workshop — Setup Verification ==="
 echo ""
 

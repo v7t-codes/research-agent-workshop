@@ -6,6 +6,13 @@
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 Q="$(cat "$REPO/demo/QUESTION.txt")"
 
+# Load .env if present (API key mode without shell profile edits)
+if [ -f "$REPO/.env" ]; then
+    set -a
+    source "$REPO/.env"
+    set +a
+fi
+
 # Load auth mode from verify.sh
 ENV_FILE="$REPO/.workshop_env"
 if [ -f "$ENV_FILE" ]; then

@@ -45,14 +45,17 @@ Step 6 (team):          93/100  ─┘  Verification + Team
 # 1. Install Claude Code
 npm install -g @anthropic-ai/claude-code
 
-# 2. Set API key
-export ANTHROPIC_API_KEY="your-key-here"
+# 2. Set API key — copy the template and fill in your key
+cp .env.example .env
+# Edit .env and replace sk-ant-... with your actual key
+# Get one at: https://console.anthropic.com/settings/keys
 
 # 3. Install Python deps
 pip install -r requirements.txt
 
 # 4. Verify
 ./verify.sh
+# Should show: ✓ ANTHROPIC_API_KEY is set
 ```
 
 ## Workshop Structure

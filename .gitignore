@@ -3,6 +3,9 @@
 __pycache__/
 *.pyc
 
+# API key — never commit
+.env
+
 # Presenter tools — never committed, never shared
 presenter/
 

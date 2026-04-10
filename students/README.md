@@ -10,12 +10,13 @@ cd research-agent-workshop
 # 2. Install Python dependency
 pip install fastmcp
 
-# 3. Log in to Claude Code
-claude auth login
-# Opens browser → log in with your claude.ai account → done
+# 3. Set your API key
+cp .env.example .env
+# Open .env and replace sk-ant-... with the key shared by the presenters
 
 # 4. Confirm everything works
 ./verify.sh
+# Should show: ✓ ANTHROPIC_API_KEY is set
 ```
 
 ---
