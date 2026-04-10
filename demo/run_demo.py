@@ -707,53 +707,21 @@ def run_step(step: int, prev_score: float = 0) -> tuple[str, float]:
     ))
     console.print()
 
-    # ── Full RACE scoring breakdown ──
+    # ── Full RACE scoring breakdown (live LLM judge) ──
     console.print(Rule("[bold]Scoring[/bold]", style="bright_white"))
     console.print()
     score = score_output(output_path, step, color)
 
-    # ── Visual score comparison with bars ──
+    # ── Delta from previous step ──
     EXPECTED_STAIRCASE = {1: 21, 2: 37, 3: 58, 4: 53, 5: 90, 6: 93}
     expected = EXPECTED_STAIRCASE.get(step, 0)
 
-    # Build visual comparison table
-    score_table = Table(
-        title=f"[bold]📈 Score — Step {step}[/bold]",
-        show_lines=True,
-        width=min(console.width, 100),
-    )
-    score_table.add_column("", style="bold", width=18)
-    score_table.add_column("Score", justify="right", width=8)
-    score_table.add_column("", width=42)
-    score_table.add_column("Notes", style="dim", width=20)
-
-    # Live score bar
-    live = score or 0
-    live_bar_len = int(live / 2.5)
-    live_bar = f"[bold {color}]{'█' * live_bar_len}{'░' * (40 - live_bar_len)}[/bold {color}]"
-    score_table.add_row("Live Score", f"[bold]{live:.1f}[/bold]", live_bar, "this run")
-
-    # Expected score bar
-    exp_bar_len = int(expected / 2.5)
-    exp_bar = f"[dim]{'█' * exp_bar_len}{'░' * (40 - exp_bar_len)}[/dim]"
-    score_table.add_row("Expected", f"{expected}", exp_bar, "reference staircase")
-
-    # Previous step bar + delta
-    if prev_score > 0:
-        prev_bar_len = int(prev_score / 2.5)
-        prev_bar = f"[dim]{'█' * prev_bar_len}{'░' * (40 - prev_bar_len)}[/dim]"
-        score_table.add_row(f"Step {step - 1}", f"{prev_score:.1f}", prev_bar, "previous step")
-
-    console.print(score_table)
-    console.print()
-
-    # Delta callout
     if prev_score > 0 and score:
         delta = score - prev_score
         delta_sign = "+" if delta > 0 else ""
         if delta > 15:
             console.print(
-                f"  [green bold]▲ {delta_sign}{delta:.1f} points[/green bold]  "
+                f"  [green bold]▲ {delta_sign}{delta:.1f} points from step {step - 1}[/green bold]  "
                 f"[bold]← Big jump! This is what {meta['title'].split('(')[0].strip()} adds.[/bold]"
             )
         elif delta > 0:
@@ -763,32 +731,16 @@ def run_step(step: int, prev_score: float = 0) -> tuple[str, float]:
         elif delta < 0:
             console.print(
                 f"  [yellow]▼ {delta:.1f} points[/yellow] from step {step - 1}  "
-                f"[dim](live variance — expected staircase shows {expected})[/dim]"
+                f"[dim](expected: {expected})[/dim]"
             )
-        else:
-            console.print(f"  [dim]No change from step {step - 1}[/dim]")
         console.print()
 
-    # Show where this step sits in the full staircase
-    console.print("[bold]  Full expected staircase:[/bold]")
-    for s, exp_s in EXPECTED_STAIRCASE.items():
-        marker = " ◀ YOU ARE HERE" if s == step else ""
-        step_color = STEPS[s]["color"] if s == step else "dim"
-        bar_len = int(exp_s / 2.5)
-        bar = f"{'█' * bar_len}{'░' * (40 - bar_len)}"
-        console.print(
-            f"  [{step_color}]Step {s}: {bar} {exp_s:3d}[/{step_color}]"
-            f"[bold {color}]{marker}[/bold {color}]"
-        )
-    console.print()
-
-    # ── Summary stats ──
+    # ── Compact summary ──
     console.print(Panel(
+        f"[bold]Score:[/bold] {score or '?'}/100  (expected: {expected})  |  "
         f"[bold]Words:[/bold] {len(output_text.split())}  |  "
         f"[bold]Tools:[/bold] {len(tool_calls)}  |  "
-        f"[bold]Time:[/bold] {elapsed:.1f}s  |  "
-        f"[bold]Artifacts:[/bold] {len(found_artifacts)}  |  "
-        f"[bold]Score:[/bold] {score or '?'}/100",
+        f"[bold]Time:[/bold] {elapsed:.1f}s",
         title=f"[bold {color}]Step {step} Complete[/bold {color}]",
         border_style=color,
     ))
