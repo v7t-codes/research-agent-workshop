@@ -52,6 +52,12 @@ STEPS = {
         "concept": "Identity — WHO Claude works for",
         "what_changes": "Claude gets your domain, preferred sources, citation format, and constraints.",
         "why_it_matters": "Without context, Claude is generic. With a 20-line CLAUDE.md, it becomes domain-specific. Same model — different context — different output.",
+        "what_to_watch": [
+            "Terminology shifts from generic to domain-specific (e.g., 'protocol' not 'system')",
+            "Citation format follows the spec (Author (Year) inline)",
+            "Right conferences and sources mentioned (NeurIPS, ICML, arXiv)",
+            "BUT: still no real-time data, still one pass, still from training data only",
+        ],
         "design_principle": "Context answers WHO, not HOW. Five sentences change the output.",
         "files": ["CLAUDE.md"],
         "color": "blue",
@@ -61,6 +67,12 @@ STEPS = {
         "concept": "Methodology — HOW to do the work, one pass",
         "what_changes": "Claude follows a recipe: decompose → search → extract → cross-reference → synthesize.",
         "why_it_matters": "A skill is a RECIPE, not a CHEF. One pass, top to bottom. The output format is part of the methodology.",
+        "what_to_watch": [
+            "Output has STRUCTURE: thesis statement, ## Key Findings, ## Source Conflicts table",
+            "Claims now have specific numbers, not vague assertions",
+            "Sources are cross-referenced (consensus vs conflicts vs gaps)",
+            "BUT: still from training data only — no real-time sources, no URLs",
+        ],
         "design_principle": "A skill is a RECIPE, not a CHEF. One pass, top to bottom.",
         "files": ["CLAUDE.md", "SKILL.md"],
         "color": "green",
@@ -70,6 +82,12 @@ STEPS = {
         "concept": "Capability — new actions Claude can take",
         "what_changes": "Claude calls search_arxiv() and search_semantic_scholar(). Real papers, real URLs.",
         "why_it_matters": "Structured data beats web search. 50 lines of Python gave Claude access to arXiv. This is usually the biggest single score jump.",
+        "what_to_watch": [
+            "Real paper titles from 2025-2026 with actual arXiv URLs",
+            "Actual benchmark numbers from cited sources (not hallucinated)",
+            "Author names, publication dates, citation counts — structured metadata",
+            "Score jump: source grounding factor unlocks with real URLs",
+        ],
         "design_principle": "Structured data beats unstructured search. Build once, use everywhere.",
         "files": ["CLAUDE.md", "SKILL.md", "arxiv_server.py"],
         "color": "yellow",
@@ -79,6 +97,11 @@ STEPS = {
         "concept": "Autonomy — Claude decides when to loop",
         "what_changes": "Claude evaluates coverage after searching. If gaps, refines queries, searches again. Max 3 rounds.",
         "why_it_matters": "Still one session, one context window — NOT an agent. The skill has decision logic: trigger, refine, stop.",
+        "what_to_watch": [
+            "Claude explicitly evaluates coverage: 'sub-question 3 has only 1 source'",
+            "Refined search queries in round 2 (more specific, targeted at gaps)",
+            "More diverse sources — round 2 fills holes round 1 missed",
+        ],
         "design_principle": "Three design choices: what triggers a loop, how to refine, when to STOP.",
         "files": ["CLAUDE.md", "SKILL.md", "arxiv_server.py"],
         "color": "magenta",
@@ -88,6 +111,12 @@ STEPS = {
         "concept": "Independence — separate context window, fresh eyes",
         "what_changes": "After research, a SECOND Claude process independently verifies every citation.",
         "why_it_matters": "THE KEY BOUNDARY. Separate process = own context window = no shared bias. Catches hallucinated papers.",
+        "what_to_watch": [
+            "A second Claude process spawns — visible as 'Agent tool' call",
+            "Verification agent searches for each paper by EXACT title",
+            "Hallucinated papers flagged: 'CANNOT VERIFY — paper not found'",
+            "Corrections applied: misattributed numbers fixed, fake sources removed",
+        ],
         "design_principle": "Verification must be independent. Same context = shared bias.",
         "files": ["CLAUDE.md", "SKILL.md", "SKILL-verify.md", "arxiv_server.py"],
         "color": "cyan",
@@ -97,6 +126,12 @@ STEPS = {
         "concept": "Specialization — each agent does one thing well",
         "what_changes": "Searcher → Critic → Synthesizer. Three agents, three context windows, file-based communication.",
         "why_it_matters": "Each agent focuses deeply on one thing. They communicate through FILES, not shared memory.",
+        "what_to_watch": [
+            "Searcher agent spawns → writes searcher_output.md with raw findings",
+            "Critic agent spawns → reads searcher output, writes quality ratings",
+            "Synthesizer agent spawns → reads both files, writes final_report.md",
+            "Evidence quality ratings: STRONG / MODERATE / WEAK per source",
+        ],
         "design_principle": "The top scorers design a better team structure.",
         "files": ["CLAUDE.md", "SKILL-orchestrator.md", "SKILL-searcher.md",
                   "SKILL-critic.md", "SKILL-synthesizer.md", "arxiv_server.py"],
@@ -294,6 +329,17 @@ def run_step(step: int, prev_score: float = 0) -> tuple[str, float]:
         f"[bold]Why:[/bold] {meta['why_it_matters']}",
         title=f"[bold {color}]Step {step}[/bold {color}]",
         border_style=color,
+        width=min(console.width, 110),
+        padding=(1, 2),
+    ))
+    console.print()
+
+    # ── What to watch for ──
+    watch_items = "\n".join(f"  • {w}" for w in meta["what_to_watch"])
+    console.print(Panel(
+        f"[bold]Watch for:[/bold]\n{watch_items}",
+        title="[bold]👀 What to Watch[/bold]",
+        border_style="bright_white",
         width=min(console.width, 110),
         padding=(1, 2),
     ))
